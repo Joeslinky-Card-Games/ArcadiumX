@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@clerk/tanstack-react-start";
 import { useApi, type GameAction, type MatchView } from "@/lib/api";
+import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
 import { autoArrange } from "@/lib/game/melds";
@@ -54,6 +55,7 @@ function MatchPage() {
   const selfImage = user?.imageUrl ?? null;
   const api = useApi();
   const qc = useQueryClient();
+  const identity = useClerkIdentity();
 
   const query = useQuery({
     queryKey: ["match", matchId],
@@ -61,6 +63,30 @@ function MatchPage() {
     refetchInterval: 2000,
     enabled: Boolean(matchId),
   });
+
+  // Clerk session JWTs don't carry username/avatar. Refresh the caller's own
+  // entry once the client identity is loaded so other players see the right
+  // name (fixes stale creator names on tables created before identity was
+  // available client-side).
+  const storedName = query.data?.usernames?.[userId] ?? null;
+  const storedAvatar = query.data?.avatars?.[userId] ?? null;
+  const isPlayer = Boolean(userId) && Array.isArray(query.data?.players) && query.data!.players.includes(userId);
+  const needsRefresh =
+    isPlayer &&
+    ((identity.displayName && identity.displayName !== storedName) ||
+      (identity.avatarUrl && identity.avatarUrl !== storedAvatar));
+  useEffect(() => {
+    if (!needsRefresh) return;
+    let cancelled = false;
+    api<MatchView>(`/matches/${matchId}/identify`, {
+      method: "POST",
+      body: { displayName: identity.displayName, avatarUrl: identity.avatarUrl },
+    })
+      .then((data) => { if (!cancelled) qc.setQueryData(["match", matchId], data); })
+      .catch(() => { /* non-fatal — next call retries */ });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsRefresh, matchId, identity.displayName, identity.avatarUrl]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["match", matchId] });
 
