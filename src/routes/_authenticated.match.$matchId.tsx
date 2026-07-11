@@ -272,6 +272,8 @@ function GameView({
   onNextRound,
   pending,
   actionError,
+  onPlayAgain,
+  playAgainPending,
   onSendChat,
   chatPending,
   chatError,
@@ -283,6 +285,8 @@ function GameView({
   onNextRound: () => void;
   pending: boolean;
   actionError: string | null;
+  onPlayAgain: () => void;
+  playAgainPending: boolean;
   onSendChat: (text: string) => void;
   chatPending: boolean;
   chatError: string | null;
