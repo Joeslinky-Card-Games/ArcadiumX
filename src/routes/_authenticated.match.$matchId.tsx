@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@clerk/tanstack-react-start";
-import { useApi, type GameAction, type MatchView } from "@/lib/api";
+import { useApi, type GameAction, type MatchView, type ChatMessage } from "@/lib/api";
 import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
@@ -103,6 +103,13 @@ function MatchPage() {
     mutationFn: () => api<MatchView>(`/matches/${matchId}/next-round`, { method: "POST" }),
     onSuccess: (data) => { qc.setQueryData(["match", matchId], data); },
   });
+  const chatMut = useMutation({
+    mutationFn: (text: string) =>
+      api<MatchView>(`/matches/${matchId}/chat`, { method: "POST", body: { text } }),
+    onSuccess: (data) => { qc.setQueryData(["match", matchId], data); },
+  });
+  const chatError = chatMut.error instanceof Error ? chatMut.error.message : null;
+  const sendChat = (text: string) => chatMut.mutate(text);
 
   if (query.isLoading) return <Centered>Loading match…</Centered>;
   if (query.error) return <Centered>Failed to load match. <button className="underline" onClick={invalidate}>Retry</button></Centered>;
@@ -117,6 +124,9 @@ function MatchPage() {
         onStart={() => startMut.mutate()}
         starting={startMut.isPending}
         startError={startMut.error instanceof Error ? startMut.error.message : null}
+        onSendChat={sendChat}
+        chatPending={chatMut.isPending}
+        chatError={chatError}
       />
     );
   }
@@ -130,6 +140,9 @@ function MatchPage() {
       onNextRound={() => nextRoundMut.mutate()}
       pending={actionMut.isPending || nextRoundMut.isPending}
       actionError={actionMut.error instanceof Error ? actionMut.error.message : null}
+      onSendChat={sendChat}
+      chatPending={chatMut.isPending}
+      chatError={chatError}
     />
   );
 }
@@ -145,6 +158,9 @@ function LobbyView({
   onStart,
   starting,
   startError,
+  onSendChat,
+  chatPending,
+  chatError,
 }: {
   match: MatchView;
   userId: string;
@@ -152,6 +168,9 @@ function LobbyView({
   onStart: () => void;
   starting: boolean;
   startError: string | null;
+  onSendChat: (text: string) => void;
+  chatPending: boolean;
+  chatError: string | null;
 }) {
   const isCreator = match.createdBy === userId;
   const minPlayers = match.minPlayers ?? 2;
@@ -211,6 +230,13 @@ function LobbyView({
         )}
         {startError && <p className="mt-2 text-sm text-rose-300">{startError}</p>}
       </div>
+      <ChatPanel
+        match={match}
+        userId={userId}
+        onSend={onSendChat}
+        pending={chatPending}
+        error={chatError}
+      />
     </main>
   );
 }
@@ -225,6 +251,9 @@ function GameView({
   onNextRound,
   pending,
   actionError,
+  onSendChat,
+  chatPending,
+  chatError,
 }: {
   match: MatchView;
   userId: string;
@@ -233,6 +262,9 @@ function GameView({
   onNextRound: () => void;
   pending: boolean;
   actionError: string | null;
+  onSendChat: (text: string) => void;
+  chatPending: boolean;
+  chatError: string | null;
 }) {
   const order = match._order ?? match.players;
   const currentUser = order[(match.turn ?? 0) % order.length];
@@ -514,6 +546,13 @@ function GameView({
         open={rulesOpen}
         onOpenChange={setRulesOpen}
         onDontShowAgain={dontShowAgain}
+      />
+      <ChatPanel
+        match={match}
+        userId={userId}
+        onSend={onSendChat}
+        pending={chatPending}
+        error={chatError}
       />
     </main>
   );
@@ -828,6 +867,117 @@ function RoundSummary({
           )}
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function ChatPanel({
+  match,
+  userId,
+  onSend,
+  pending,
+  error,
+}: {
+  match: MatchView;
+  userId: string;
+  onSend: (text: string) => void;
+  pending: boolean;
+  error: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const messages: ChatMessage[] = match.chatMessages ?? [];
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSeenRef = useRef<number>(0);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (open) {
+      // Scroll to bottom on open or new message.
+      const el = scrollRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+      lastSeenRef.current = messages.length > 0 ? messages[messages.length - 1].at : 0;
+      setUnread(0);
+    } else {
+      const count = messages.filter((m) => m.at > lastSeenRef.current && m.userId !== userId).length;
+      setUnread(count);
+    }
+  }, [open, messages, userId]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed || pending) return;
+    onSend(trimmed);
+    setText("");
+  };
+
+  return (
+    <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end">
+      {open && (
+        <div className="mb-2 flex w-80 max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-amber-300/30 bg-emerald-950/95 shadow-2xl backdrop-blur">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-amber-200/80">Table chat</span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded-full px-2 text-white/60 hover:text-white"
+              aria-label="Close chat"
+            >
+              ×
+            </button>
+          </div>
+          <div ref={scrollRef} className="max-h-72 min-h-[8rem] overflow-y-auto px-3 py-2 text-sm">
+            {messages.length === 0 ? (
+              <p className="py-4 text-center text-xs text-white/40">No messages yet. Say hi!</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {messages.map((m) => {
+                  const mine = m.userId === userId;
+                  const name = displayName(match, m.userId, userId);
+                  return (
+                    <li key={m.id} className="leading-snug">
+                      <span className={`mr-1 font-semibold ${mine ? "text-amber-200" : "text-emerald-300"}`}>
+                        {name}:
+                      </span>
+                      <span className="text-white/90 break-words">{m.text}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t border-white/10 p-2">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value.slice(0, 200))}
+              placeholder="Message the table…"
+              className="flex-1 rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-amber-300/60 focus:outline-none"
+              maxLength={200}
+            />
+            <button
+              type="submit"
+              disabled={pending || !text.trim()}
+              className="rounded-md bg-amber-400 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-amber-300 disabled:opacity-40"
+            >
+              Send
+            </button>
+          </form>
+          {error && <p className="px-3 pb-2 text-xs text-rose-300">{error}</p>}
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="relative flex items-center gap-2 rounded-full border border-amber-300/40 bg-black/60 px-4 py-2 text-sm font-semibold text-amber-100 shadow-lg backdrop-blur hover:bg-black/80"
+      >
+        <span>{open ? "Hide chat" : "Chat"}</span>
+        {!open && unread > 0 && (
+          <span className="ml-1 min-w-[1.25rem] rounded-full bg-amber-400 px-1.5 text-center text-[10px] font-bold text-emerald-950">
+            {unread}
+          </span>
+        )}
+      </button>
     </div>
   );
 }
