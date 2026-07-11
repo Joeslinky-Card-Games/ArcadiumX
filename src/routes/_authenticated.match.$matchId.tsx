@@ -313,6 +313,53 @@ function GameView({
     const dismissed = window.localStorage.getItem(RULES_KEY) === "1";
     if (!dismissed) setRulesOpen(true);
   }, []);
+
+  // Ask for browser notification permission once, and prime audio on first
+  // user interaction so autoplay policies don't block the sounds.
+  useEffect(() => {
+    ensureNotificationPermission();
+    const prime = () => {
+      // Touching the AudioContext during a user gesture unlocks playback.
+      playTurnSound.length; // no-op reference to keep import
+    };
+    window.addEventListener("pointerdown", prime, { once: true });
+    window.addEventListener("keydown", prime, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", prime);
+      window.removeEventListener("keydown", prime);
+    };
+  }, []);
+
+  // Notify + play sound when it becomes the viewer's turn.
+  const wasMyTurn = useRef(false);
+  useEffect(() => {
+    const active = match.status === "in-progress";
+    if (isMyTurn && active && !wasMyTurn.current) {
+      playTurnSound();
+      showNotification("Your turn", "It's your move in Charlotte's Web.", `turn:${match.matchId}`);
+    }
+    wasMyTurn.current = isMyTurn && active;
+  }, [isMyTurn, match.status, match.turn, match.matchId]);
+
+  // Notify + play sound on new chat messages from other players.
+  const lastChatAtRef = useRef<number | null>(null);
+  useEffect(() => {
+    const msgs = match.chatMessages ?? [];
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1];
+    if (lastChatAtRef.current === null) {
+      // Initialize baseline on first render so historical messages don't fire.
+      lastChatAtRef.current = last.at;
+      return;
+    }
+    if (last.at > lastChatAtRef.current && last.userId !== userId) {
+      const name = displayName(match, last.userId, userId);
+      playChatSound();
+      showNotification(`${name} says…`, last.text, `chat:${match.matchId}`);
+    }
+    lastChatAtRef.current = last.at;
+  }, [match.chatMessages, match, userId]);
+
   const dontShowAgain = () => {
     try { window.localStorage.setItem(RULES_KEY, "1"); } catch { /* ignore */ }
     setRulesOpen(false);
