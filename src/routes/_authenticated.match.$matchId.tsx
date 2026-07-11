@@ -818,13 +818,9 @@ function SeatCard({
   laidMelds?: string[][];
   wildRank: string | null;
 }) {
-  // Laid-down melds can crowd the table when several players go out — hide by
-  // default on small screens, expand on desktop, always toggleable.
+  // Laid-down melds crowd the table when several players go out — open in a
+  // full-screen modal on demand so nothing obstructs the table UI.
   const [meldsOpen, setMeldsOpen] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setMeldsOpen(window.matchMedia("(min-width: 640px)").matches);
-  }, []);
   const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
   return (
     <div
@@ -851,18 +847,15 @@ function SeatCard({
             className="rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
             aria-expanded={meldsOpen}
           >
-            {meldsOpen ? "Hide" : "Show"} hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
+            Show hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
           </button>
           {meldsOpen && (
-            <div className="flex flex-wrap items-center justify-center gap-1">
-              {laidMelds.map((meld, i) => (
-                <div key={i} className="flex -space-x-3">
-                  {orderMeldForDisplay(meld, wildRank).map((c) => (
-                    <PlayingCard key={c} id={c} wildRank={wildRank} size="sm" />
-                  ))}
-                </div>
-              ))}
-            </div>
+            <LaidMeldsDialog
+              name={name}
+              laidMelds={laidMelds}
+              wildRank={wildRank}
+              onClose={() => setMeldsOpen(false)}
+            />
           )}
         </div>
       ) : (
@@ -896,6 +889,66 @@ function SeatCard({
         )}
       </div>
       )}
+    </div>
+  );
+}
+
+function LaidMeldsDialog({
+  name,
+  laidMelds,
+  wildRank,
+  onClose,
+}: {
+  name: string;
+  laidMelds: string[][];
+  wildRank: string | null;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/75 p-3 backdrop-blur-sm sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22 }}
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-y-auto rounded-2xl border border-amber-300/30 bg-gradient-to-br from-emerald-950 to-emerald-900 p-4 text-white shadow-2xl sm:p-6"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-lg font-bold text-amber-100 sm:text-xl">{name}'s hand</h2>
+            <p className="text-[11px] uppercase tracking-wider text-white/60">
+              {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} laid down
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-md border border-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+        <div className="flex flex-wrap items-start justify-center gap-3">
+          {laidMelds.map((meld, i) => (
+            <div key={i} className="rounded-lg bg-emerald-900/50 px-2 py-1 ring-1 ring-amber-300/40">
+              <div className="flex -space-x-6 sm:-space-x-8">
+                {orderMeldForDisplay(meld, wildRank).map((c) => (
+                  <PlayingCard key={c} id={c} wildRank={wildRank} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
