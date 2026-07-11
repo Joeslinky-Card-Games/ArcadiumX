@@ -83,7 +83,7 @@ export type MatchView = Match & {
   turn?: number;
   discard?: string[];
   stockCount?: number;
-  hands?: Record<string, string[]>; // only caller's userId is populated
+  hands?: Record<string, string[]>; // caller's hand during play; all hands after round/match complete
   handCounts?: Record<string, number>;
   scores?: Record<string, number>;
   lastRoundScores?: Record<string, number> | null;
