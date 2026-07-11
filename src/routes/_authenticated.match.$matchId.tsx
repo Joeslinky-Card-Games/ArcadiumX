@@ -275,7 +275,13 @@ function GameView({
         </div>
 
       {/* My hand */}
-      <section className="mt-6">
+      <section
+        className={`mt-6 rounded-2xl p-3 transition-all duration-300 ${
+          isMyTurn && !roundComplete && !matchComplete
+            ? "bg-amber-400/10 shadow-[0_0_28px_rgba(251,191,36,0.55)] ring-2 ring-amber-300"
+            : "ring-1 ring-transparent"
+        }`}
+      >
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-200/70">
             Your hand — {sorted.length} card{sorted.length === 1 ? "" : "s"} · unmelded {" "}
