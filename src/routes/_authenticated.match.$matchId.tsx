@@ -7,7 +7,7 @@ import { useApi, type GameAction, type MatchView } from "@/lib/api";
 import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
-import { autoArrange } from "@/lib/game/melds";
+import { autoArrange, orderMeldForDisplay } from "@/lib/game/melds";
 import { RulesDialog } from "@/components/game/RulesDialog";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId")({
@@ -392,7 +392,9 @@ function GameView({
           <div className="rounded-xl border border-white/10 bg-black/25 p-3 backdrop-blur">
             <div className="flex min-h-[7rem] flex-wrap items-end justify-center gap-x-6 gap-y-3">
               <AnimatePresence initial={false}>
-                {arrangement.melds.map((meld, mi) => (
+                {arrangement.melds.map((rawMeld, mi) => {
+                  const meld = orderMeldForDisplay(rawMeld, wildRank);
+                  return (
                   <motion.div
                     key={`meld-${meld.join(",")}`}
                     layout
@@ -418,7 +420,8 @@ function GameView({
                       </motion.div>
                     ))}
                   </motion.div>
-                ))}
+                  );
+                })}
                 {unmelded.map((c) => (
                   <motion.div
                     key={c}
