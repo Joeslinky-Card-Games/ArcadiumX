@@ -345,6 +345,14 @@ function GameView({
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
 
+  // Hand visibility toggle — collapsed by default on small screens so the
+  // table (opponents, stock, discard) isn't hidden behind the hand row.
+  const [handOpen, setHandOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setHandOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
+
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -501,7 +509,17 @@ function GameView({
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-200/70">
             Hand Score: <b className="text-amber-100">{unmeldedScore}</b>
+            <span className="ml-2 text-white/60 normal-case tracking-normal">
+              · {sorted.length} card{sorted.length === 1 ? "" : "s"}
+            </span>
           </h2>
+          <button
+            onClick={() => setHandOpen((v) => !v)}
+            className="rounded-md border border-white/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white"
+            aria-expanded={handOpen}
+          >
+            {handOpen ? "Hide hand" : "Show hand"}
+          </button>
           {canLayDown && (
             <button
               onClick={handleLayDown}
@@ -522,7 +540,7 @@ function GameView({
           )}
         </div>
 
-        <LayoutGroup>
+        {handOpen && <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
           <div className="rounded-xl border border-white/10 bg-black/25 p-2 backdrop-blur sm:p-3">
             <div className="flex min-h-[6rem] flex-wrap items-end justify-center gap-x-2 gap-y-3 sm:min-h-[7rem] sm:gap-x-6">
@@ -590,7 +608,7 @@ function GameView({
               )}
             </div>
           </div>
-        </LayoutGroup>
+        </LayoutGroup>}
       </section>
       </div>
 
