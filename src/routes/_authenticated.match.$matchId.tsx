@@ -317,6 +317,37 @@ function GameView({
   const meldedIds = useMemo(() => new Set(arrangement.melds.flat()), [arrangement]);
   const unmelded = useMemo(() => sorted.filter((c) => !meldedIds.has(c)), [sorted, meldedIds]);
   const unmeldedScore = unmelded.reduce((s, c) => s + cardPoints(c), 0);
+
+  // Manual drag-and-drop ordering of unmelded cards. The user's ordering wins
+  // for any card they've touched; anything else falls back to the auto-sorted
+  // order. New cards (drawn from stock/discard) append at the end so they
+  // don't jump around inside a custom sort.
+  const [manualOrder, setManualOrder] = useState<string[]>([]);
+  useEffect(() => {
+    setManualOrder((prev) => prev.filter((c) => myHand.includes(c)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myHand.join("|")]);
+  const orderedUnmelded = useMemo(() => {
+    const inUnmelded = new Set(unmelded);
+    const kept = manualOrder.filter((c) => inUnmelded.has(c));
+    const rest = unmelded.filter((c) => !manualOrder.includes(c));
+    return [...kept, ...rest];
+  }, [unmelded, manualOrder]);
+  const hasCustomSort = manualOrder.length > 0;
+
+  const dragSensors = useSensors(
+    // Small activation distance so single-tap still fires the discard click.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = orderedUnmelded.indexOf(String(active.id));
+    const newIdx = orderedUnmelded.indexOf(String(over.id));
+    if (oldIdx < 0 || newIdx < 0) return;
+    setManualOrder(arrayMove(orderedUnmelded, oldIdx, newIdx));
+  };
+
   const canLayDown = arrangement.complete && arrangement.discard !== null && isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
   const canDiscard = isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
 
