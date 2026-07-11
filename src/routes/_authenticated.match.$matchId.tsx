@@ -565,7 +565,7 @@ function SeatCard({
       }`}
     >
       <div className="flex items-center gap-2">
-        <Avatar name={name} userId={userId} />
+        <Avatar name={name} userId={userId} imageUrl={imageUrl} />
         <div className="text-left leading-tight">
           <div className="max-w-[8rem] truncate text-sm font-semibold text-white">{name}</div>
           <div className="text-[10px] uppercase tracking-wider text-white/60">
