@@ -591,7 +591,9 @@ function TableArea({
               isTurn={p === currentUser}
               count={match.handCounts?.[p] ?? 0}
               score={match.scores?.[p] ?? 0}
-              wentOut={goneOut === p}
+              wentOut={Boolean(match.laidMelds?.[p])}
+              laidMelds={match.laidMelds?.[p]}
+              wildRank={wildRank}
             />
           </div>
         );
