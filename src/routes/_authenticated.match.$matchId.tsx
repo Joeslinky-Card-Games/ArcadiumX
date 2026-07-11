@@ -249,6 +249,8 @@ function GameView({
             <span>Hand <b className="text-amber-200">{match.handSize}</b></span>
             <span className="text-white/30">·</span>
             <span>Wild <b className="text-amber-300">{wildRank === null ? "—" : wildRank === "T" ? "10" : wildRank}</b> + ★</span>
+            <span className="text-white/30">·</span>
+            <span>Score <b className="text-amber-200">{match.scores?.[userId] ?? 0}</b></span>
           </div>
         </div>
 
