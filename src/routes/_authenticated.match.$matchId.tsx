@@ -719,7 +719,7 @@ function SeatCard({
           {laidMelds.map((meld, i) => (
             <div key={i} className="flex -space-x-3">
               {orderMeldForDisplay(meld, wildRank).map((c) => (
-                <PlayingCard key={c} id={c} wildRank={wildRank} size="xs" />
+                <PlayingCard key={c} id={c} wildRank={wildRank} size="sm" />
               ))}
             </div>
           ))}
