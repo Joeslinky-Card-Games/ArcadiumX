@@ -363,15 +363,33 @@ function GameView({
 
   const goOutOptions = arrangement.goOutOptions ?? [];
   const [pickingGoOutDiscard, setPickingGoOutDiscard] = useState(false);
+  const [pendingDiscard, setPendingDiscard] = useState<string | null>(null);
 
   // Reset the picker if the state that gates it changes.
   useEffect(() => {
     if (!canLayDown || goOutOptions.length <= 1) setPickingGoOutDiscard(false);
   }, [canLayDown, goOutOptions.length]);
 
+  // Clear any pending discard when it no longer applies (turn changed, hand
+  // updated, round ended, etc.).
+  useEffect(() => {
+    if (!canDiscard) { setPendingDiscard(null); return; }
+    if (pendingDiscard && !myHand.includes(pendingDiscard)) setPendingDiscard(null);
+  }, [canDiscard, pendingDiscard, myHand]);
+
   const handleCardClick = (card: string) => {
     if (pickingGoOutDiscard) return; // picker modal handles selection
     if (!canDiscard) return;
+    // Two-tap confirm: first tap selects, second tap on same card discards.
+    // Cards can sit very close together on mobile, so require an explicit
+    // confirmation before committing.
+    setPendingDiscard(card);
+  };
+
+  const confirmDiscard = () => {
+    if (!pendingDiscard || !canDiscard) return;
+    const card = pendingDiscard;
+    setPendingDiscard(null);
     onAction({ type: "discard", card });
   };
 
