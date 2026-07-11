@@ -118,6 +118,10 @@ function MatchPage() {
     mutationFn: () => api<MatchView>(`/matches/${matchId}/next-round`, { method: "POST" }),
     onSuccess: (data) => { qc.setQueryData(["match", matchId], data); },
   });
+  const playAgainMut = useMutation({
+    mutationFn: () => api<MatchView>(`/matches/${matchId}/play-again`, { method: "POST" }),
+    onSuccess: (data) => { qc.setQueryData(["match", matchId], data); },
+  });
   const chatMut = useMutation({
     mutationFn: (text: string) =>
       api<MatchView>(`/matches/${matchId}/chat`, { method: "POST", body: { text } }),
@@ -155,6 +159,8 @@ function MatchPage() {
       onNextRound={() => nextRoundMut.mutate()}
       pending={actionMut.isPending || nextRoundMut.isPending}
       actionError={actionMut.error instanceof Error ? actionMut.error.message : null}
+      onPlayAgain={() => playAgainMut.mutate()}
+      playAgainPending={playAgainMut.isPending}
       onSendChat={sendChat}
       chatPending={chatMut.isPending}
       chatError={chatError}
@@ -266,6 +272,8 @@ function GameView({
   onNextRound,
   pending,
   actionError,
+  onPlayAgain,
+  playAgainPending,
   onSendChat,
   chatPending,
   chatError,
@@ -277,6 +285,8 @@ function GameView({
   onNextRound: () => void;
   pending: boolean;
   actionError: string | null;
+  onPlayAgain: () => void;
+  playAgainPending: boolean;
   onSendChat: (text: string) => void;
   chatPending: boolean;
   chatError: string | null;
@@ -569,6 +579,8 @@ function GameView({
           userId={userId}
           onNext={onNextRound}
           pending={pending}
+          onPlayAgain={onPlayAgain}
+          playAgainPending={playAgainPending}
         />
       )}
 
@@ -842,17 +854,24 @@ function RoundSummary({
   userId,
   onNext,
   pending,
+  onPlayAgain,
+  playAgainPending,
 }: {
   match: MatchView;
   userId: string;
   onNext: () => void;
   pending: boolean;
+  onPlayAgain: () => void;
+  playAgainPending: boolean;
 }) {
   const navigate = useNavigate();
   const deltas = match.lastRoundScores ?? {};
   const scores = match.scores ?? {};
   const complete = match.status === "complete";
   const sorted = [...match.players].sort((a, b) => (scores[a] ?? 0) - (scores[b] ?? 0));
+  const votes = new Set(match.playAgain ?? []);
+  const myVote = votes.has(userId);
+  const votedCount = match.players.filter((p) => votes.has(p)).length;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <motion.div
@@ -889,12 +908,43 @@ function RoundSummary({
         </table>
         <div className="mt-6 flex justify-end gap-2">
           {complete ? (
-            <button
-              onClick={() => navigate({ to: "/lobby" })}
-              className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 hover:bg-amber-300"
-            >
-              Back to lobby
-            </button>
+            <>
+              <div className="mr-auto text-left text-xs text-white/70">
+                <div className="font-semibold uppercase tracking-widest text-amber-200/70">
+                  Play again — {votedCount}/{match.players.length} ready
+                </div>
+                <ul className="mt-1 space-y-0.5">
+                  {match.players.map((p) => (
+                    <li key={p} className="flex items-center gap-1.5">
+                      <span
+                        className={
+                          votes.has(p)
+                            ? "inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"
+                            : "inline-block h-1.5 w-1.5 rounded-full bg-white/25"
+                        }
+                      />
+                      <span className={votes.has(p) ? "text-emerald-200" : "text-white/60"}>
+                        {displayName(match, p, userId)}
+                        {votes.has(p) ? " · ready" : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button
+                onClick={() => navigate({ to: "/lobby" })}
+                className="rounded-md border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+              >
+                Lobby
+              </button>
+              <button
+                onClick={onPlayAgain}
+                disabled={myVote || playAgainPending}
+                className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 hover:bg-amber-300 disabled:opacity-50"
+              >
+                {myVote ? "Waiting for others…" : playAgainPending ? "Voting…" : "Play again"}
+              </button>
+            </>
           ) : (
             <button
               disabled={pending}
