@@ -363,15 +363,33 @@ function GameView({
 
   const goOutOptions = arrangement.goOutOptions ?? [];
   const [pickingGoOutDiscard, setPickingGoOutDiscard] = useState(false);
+  const [pendingDiscard, setPendingDiscard] = useState<string | null>(null);
 
   // Reset the picker if the state that gates it changes.
   useEffect(() => {
     if (!canLayDown || goOutOptions.length <= 1) setPickingGoOutDiscard(false);
   }, [canLayDown, goOutOptions.length]);
 
+  // Clear any pending discard when it no longer applies (turn changed, hand
+  // updated, round ended, etc.).
+  useEffect(() => {
+    if (!canDiscard) { setPendingDiscard(null); return; }
+    if (pendingDiscard && !myHand.includes(pendingDiscard)) setPendingDiscard(null);
+  }, [canDiscard, pendingDiscard, myHand]);
+
   const handleCardClick = (card: string) => {
     if (pickingGoOutDiscard) return; // picker modal handles selection
     if (!canDiscard) return;
+    // Two-tap confirm: first tap selects, second tap on same card discards.
+    // Cards can sit very close together on mobile, so require an explicit
+    // confirmation before committing.
+    setPendingDiscard(card);
+  };
+
+  const confirmDiscard = () => {
+    if (!pendingDiscard || !canDiscard) return;
+    const card = pendingDiscard;
+    setPendingDiscard(null);
     onAction({ type: "discard", card });
   };
 
@@ -599,6 +617,15 @@ function GameView({
           pending={pending}
           onCancel={() => setPickingGoOutDiscard(false)}
           onPick={handlePickOption}
+        />
+      )}
+      {pendingDiscard && (
+        <DiscardConfirm
+          card={pendingDiscard}
+          wildRank={wildRank}
+          pending={pending}
+          onCancel={() => setPendingDiscard(null)}
+          onConfirm={confirmDiscard}
         />
       )}
       <ChatPanel
@@ -1104,6 +1131,59 @@ function SortableCard({
   return (
     <div ref={setNodeRef} style={style} className={overlap} {...attributes} {...listeners}>
       <PlayingCard id={id} wildRank={wildRank} onClick={onClick} />
+    </div>
+  );
+}
+
+function DiscardConfirm({
+  card,
+  wildRank,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  card: string;
+  wildRank: string | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.94, opacity: 0, y: 12 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 22 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm rounded-2xl border border-amber-300/30 bg-gradient-to-br from-emerald-950 to-emerald-900 p-5 text-white shadow-2xl"
+      >
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-200/80">
+          Discard this card?
+        </h2>
+        <div className="mt-4 flex justify-center">
+          <PlayingCard id={card} wildRank={wildRank} size="lg" />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border border-white/20 px-4 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={pending}
+            className="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-emerald-950 hover:bg-amber-300 disabled:opacity-40"
+          >
+            {pending ? "Discarding…" : "Discard"}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }
