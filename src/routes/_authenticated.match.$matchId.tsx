@@ -504,8 +504,8 @@ function GameView({
 
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
-          <div className="rounded-xl border border-white/10 bg-black/25 p-3 backdrop-blur">
-            <div className="flex min-h-[7rem] flex-wrap items-end justify-center gap-x-6 gap-y-3">
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2 backdrop-blur sm:p-3">
+            <div className="flex min-h-[6rem] flex-wrap items-end justify-center gap-x-2 gap-y-3 sm:min-h-[7rem] sm:gap-x-6">
               <AnimatePresence initial={false}>
                 {arrangement.melds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
@@ -517,7 +517,7 @@ function GameView({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 240, damping: 22 }}
-                    className="relative flex items-end rounded-lg bg-emerald-900/50 px-2 py-1 ring-1 ring-amber-300/40"
+                    className="relative flex items-end rounded-lg bg-emerald-900/50 px-1.5 py-1 ring-1 ring-amber-300/40 sm:px-2"
                     title={`Meld #${mi + 1}`}
                   >
                     {meld.map((c, i) => (
@@ -525,7 +525,8 @@ function GameView({
                         key={c}
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                        style={{ marginLeft: i === 0 ? 0 : -34, zIndex: i }}
+                        className={i === 0 ? "" : "-ml-8 sm:-ml-[34px]"}
+                        style={{ zIndex: i }}
                       >
                         <PlayingCard
                           id={c}
@@ -543,11 +544,12 @@ function GameView({
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext items={orderedUnmelded} strategy={horizontalListSortingStrategy}>
-                    {orderedUnmelded.map((c) => (
+                    {orderedUnmelded.map((c, i) => (
                       <SortableCard
                         key={c}
                         id={c}
                         wildRank={wildRank}
+                        index={i}
                         onClick={() => handleCardClick(c)}
                       />
                     ))}
