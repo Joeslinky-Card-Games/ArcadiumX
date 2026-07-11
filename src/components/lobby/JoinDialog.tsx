@@ -15,11 +15,13 @@ export function JoinDialog({
   onOpenChange,
   games,
   userId,
+  identity,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   games: Game[];
   userId: string;
+  identity?: { displayName?: string; avatarUrl?: string };
 }) {
   const api = useApi();
   const qc = useQueryClient();
@@ -38,7 +40,7 @@ export function JoinDialog({
     mutationFn: (input: { matchId: string; password?: string }) =>
       api<MatchView>(`/matches/${input.matchId}/join`, {
         method: "POST",
-        body: input.password ? { password: input.password } : {},
+        body: { ...(identity ?? {}), ...(input.password ? { password: input.password } : {}) },
       }),
     onSuccess: (m) => {
       qc.invalidateQueries({ queryKey: ["matches", "open"] });
