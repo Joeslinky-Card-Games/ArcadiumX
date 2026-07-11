@@ -591,7 +591,9 @@ function TableArea({
               isTurn={p === currentUser}
               count={match.handCounts?.[p] ?? 0}
               score={match.scores?.[p] ?? 0}
-              wentOut={goneOut === p}
+              wentOut={Boolean(match.laidMelds?.[p])}
+              laidMelds={match.laidMelds?.[p]}
+              wildRank={wildRank}
             />
           </div>
         );
@@ -682,6 +684,8 @@ function SeatCard({
   count,
   score,
   wentOut,
+  laidMelds,
+  wildRank,
 }: {
   name: string;
   userId: string;
@@ -690,6 +694,8 @@ function SeatCard({
   count: number;
   score: number;
   wentOut: boolean;
+  laidMelds?: string[][];
+  wildRank: string | null;
 }) {
   return (
     <div
@@ -708,7 +714,17 @@ function SeatCard({
           </div>
         </div>
       </div>
-      {/* Fanned card backs */}
+      {laidMelds && laidMelds.length > 0 ? (
+        <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
+          {laidMelds.map((meld, i) => (
+            <div key={i} className="flex -space-x-3">
+              {orderMeldForDisplay(meld, wildRank).map((c) => (
+                <PlayingCard key={c} id={c} wildRank={wildRank} size="sm" />
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="relative mt-1 flex h-8 items-center justify-center">
         {Array.from({ length: Math.min(count, 6) }).map((_, i) => {
           const total = Math.min(count, 6);
@@ -738,6 +754,7 @@ function SeatCard({
           </span>
         )}
       </div>
+      )}
     </div>
   );
 }
