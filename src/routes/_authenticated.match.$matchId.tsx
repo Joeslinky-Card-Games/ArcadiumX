@@ -527,22 +527,22 @@ function GameView({
                   </motion.div>
                   );
                 })}
-                {unmelded.map((c) => (
-                  <motion.div
-                    key={c}
-                    layoutId={`card-${c}`}
-                    initial={{ y: -140, opacity: 0, rotate: -8 }}
-                    animate={{ y: 0, opacity: 1, rotate: 0 }}
-                    exit={{ y: 120, opacity: 0, rotate: 6, scale: 0.85 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                  >
-                    <PlayingCard
-                      id={c}
-                      wildRank={wildRank}
-                      onClick={() => handleCardClick(c)}
-                    />
-                  </motion.div>
-                ))}
+                <DndContext
+                  sensors={dragSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={orderedUnmelded} strategy={horizontalListSortingStrategy}>
+                    {orderedUnmelded.map((c) => (
+                      <SortableCard
+                        key={c}
+                        id={c}
+                        wildRank={wildRank}
+                        onClick={() => handleCardClick(c)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </AnimatePresence>
               {sorted.length === 0 && <p className="self-center text-sm text-white/60">No cards in hand.</p>}
               {sorted.length > 0 && unmelded.length === 0 && arrangement.melds.length > 0 && (
