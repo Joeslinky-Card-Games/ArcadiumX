@@ -287,7 +287,13 @@ function GameView({
             {" "}Final turns remaining: {match.remainingFinalTurns}.
           </span>
         ) : isMyTurn ? (
-          <span className="text-amber-200">Your turn — {match.hasDrawn ? "tap a card to discard, or lay down" : "draw a card"}.</span>
+          <span className="text-amber-200">Your turn — {
+            !match.hasDrawn
+              ? "draw a card"
+              : canLayDown
+                ? "tap a card to discard, or lay down to go out"
+                : "tap a card to discard"
+          }.</span>
         ) : (
           <span className="text-white/70">Waiting on {displayName(match, currentUser, userId)}…</span>
         )}
