@@ -547,6 +547,13 @@ function GameView({
         onOpenChange={setRulesOpen}
         onDontShowAgain={dontShowAgain}
       />
+      <ChatPanel
+        match={match}
+        userId={userId}
+        onSend={onSendChat}
+        pending={chatPending}
+        error={chatError}
+      />
     </main>
   );
 }
