@@ -4,6 +4,7 @@ const { ok, badRequest, notFound, forbidden, serverError } = require("../../lib/
 const { withAuth } = require("../../lib/auth");
 const { applyAction } = require("../../lib/game/engine");
 const { redactForUser } = require("../../lib/game/view");
+const { withRefreshedTtl } = require("../../lib/matches");
 
 exports.handler = withAuth(async (event, { userId }) => {
   const matchId = event.pathParameters?.matchId;
@@ -27,11 +28,12 @@ exports.handler = withAuth(async (event, { userId }) => {
       return badRequest(err.message);
     }
 
+    const nextWithTtl = withRefreshedTtl(next);
     try {
       await ddb.send(
         new PutCommand({
           TableName: tables.matches,
-          Item: next,
+          Item: nextWithTtl,
           ConditionExpression: "version = :v",
           ExpressionAttributeValues: { ":v": expectedVersion },
         })
@@ -42,7 +44,7 @@ exports.handler = withAuth(async (event, { userId }) => {
       }
       throw err;
     }
-    return ok(redactForUser(next, userId));
+    return ok(redactForUser(nextWithTtl, userId));
   } catch (err) {
     console.error(err);
     return serverError();
