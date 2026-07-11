@@ -672,6 +672,7 @@ function TableArea({
   goneOut,
   roundComplete,
   matchComplete,
+  viewerDone,
   discardTop,
   wildRank,
   onAction,
@@ -686,6 +687,7 @@ function TableArea({
   goneOut: string | null | undefined;
   roundComplete: boolean;
   matchComplete: boolean;
+  viewerDone: boolean;
   discardTop: string | null;
   wildRank: string | null;
   onAction: (a: GameAction) => void;
