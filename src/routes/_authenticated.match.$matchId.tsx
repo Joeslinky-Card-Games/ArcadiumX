@@ -320,6 +320,20 @@ function GameView({
   const roundComplete = match.status === "round-complete";
   const matchComplete = match.status === "complete";
   const viewerDone = Boolean((goneOut && goneOut === userId) || match.laidMelds?.[userId]);
+  // After someone goes out, each remaining player gets one final turn. Their
+  // hand becomes visible to everyone once that turn has ended.
+  const finalTurnDone = useMemo(() => {
+    const set = new Set<string>();
+    if (!goneOut || order.length === 0) return set;
+    const startIdx = order.indexOf(goneOut);
+    if (startIdx === -1) return set;
+    const n = order.length;
+    const completed = Math.max(0, (n - 1) - (match.remainingFinalTurns ?? 0));
+    for (let i = 1; i <= completed; i++) {
+      set.add(order[(startIdx + i) % n]);
+    }
+    return set;
+  }, [goneOut, order, match.remainingFinalTurns]);
 
   // Announce the first "went out" event with a dismissible popup so it's not
   // easy to miss when opponents (or you) finish the round early.
@@ -480,6 +494,7 @@ function GameView({
           roundComplete={roundComplete}
           matchComplete={matchComplete}
           viewerDone={viewerDone}
+          finalTurnDone={finalTurnDone}
           discardTop={discardTop}
           wildRank={wildRank}
           onAction={onAction}
@@ -681,6 +696,7 @@ function TableArea({
   roundComplete,
   matchComplete,
   viewerDone,
+  finalTurnDone,
   discardTop,
   wildRank,
   onAction,
@@ -696,6 +712,7 @@ function TableArea({
   roundComplete: boolean;
   matchComplete: boolean;
   viewerDone: boolean;
+  finalTurnDone: Set<string>;
   discardTop: string | null;
   wildRank: string | null;
   onAction: (a: GameAction) => void;
@@ -748,7 +765,7 @@ function TableArea({
               wentOut={Boolean(match.laidMelds?.[p])}
               laidMelds={match.laidMelds?.[p]}
               hand={match.hands?.[p]}
-              roundComplete={roundComplete || matchComplete || viewerDone}
+              handVisible={roundComplete || matchComplete || viewerDone || finalTurnDone.has(p)}
               wildRank={wildRank}
             />
           </div>
@@ -842,7 +859,7 @@ function SeatCard({
   wentOut,
   laidMelds,
   hand,
-  roundComplete,
+  handVisible,
   wildRank,
 }: {
   name: string;
@@ -854,14 +871,14 @@ function SeatCard({
   wentOut: boolean;
   laidMelds?: string[][];
   hand?: string[];
-  roundComplete: boolean;
+  handVisible: boolean;
   wildRank: string | null;
 }) {
   // Laid-down melds and final hands crowd the table when several players go
   // out — open in a full-screen modal on demand so nothing obstructs the table UI.
   const [meldsOpen, setMeldsOpen] = useState(false);
   const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
-  const canShowHand = (laidMelds && laidMelds.length > 0) || (roundComplete && hand && hand.length > 0);
+  const canShowHand = (laidMelds && laidMelds.length > 0) || (handVisible && hand && hand.length > 0);
   return (
     <div
       className={`flex w-max min-w-[10rem] flex-col items-center gap-1 rounded-xl px-3 py-2 backdrop-blur transition-all ${
