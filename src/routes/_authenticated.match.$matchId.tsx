@@ -460,6 +460,7 @@ function GameView({
           pending={pending}
           goneOut={goneOut}
           roundComplete={roundComplete}
+          matchComplete={matchComplete}
           discardTop={discardTop}
           wildRank={wildRank}
           onAction={onAction}
@@ -651,6 +652,7 @@ function TableArea({
   pending,
   goneOut,
   roundComplete,
+  matchComplete,
   discardTop,
   wildRank,
   onAction,
@@ -664,6 +666,7 @@ function TableArea({
   pending: boolean;
   goneOut: string | null | undefined;
   roundComplete: boolean;
+  matchComplete: boolean;
   discardTop: string | null;
   wildRank: string | null;
   onAction: (a: GameAction) => void;
@@ -715,6 +718,8 @@ function TableArea({
               score={match.scores?.[p] ?? 0}
               wentOut={Boolean(match.laidMelds?.[p])}
               laidMelds={match.laidMelds?.[p]}
+              hand={match.hands?.[p]}
+              roundComplete={roundComplete || matchComplete}
               wildRank={wildRank}
             />
           </div>
@@ -807,6 +812,8 @@ function SeatCard({
   score,
   wentOut,
   laidMelds,
+  hand,
+  roundComplete,
   wildRank,
 }: {
   name: string;
@@ -817,12 +824,15 @@ function SeatCard({
   score: number;
   wentOut: boolean;
   laidMelds?: string[][];
+  hand?: string[];
+  roundComplete: boolean;
   wildRank: string | null;
 }) {
-  // Laid-down melds crowd the table when several players go out — open in a
-  // full-screen modal on demand so nothing obstructs the table UI.
+  // Laid-down melds and final hands crowd the table when several players go
+  // out — open in a full-screen modal on demand so nothing obstructs the table UI.
   const [meldsOpen, setMeldsOpen] = useState(false);
   const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
+  const canShowHand = (laidMelds && laidMelds.length > 0) || (roundComplete && hand && hand.length > 0);
   return (
     <div
       className={`flex w-max min-w-[10rem] flex-col items-center gap-1 rounded-xl px-3 py-2 backdrop-blur transition-all ${
@@ -840,7 +850,7 @@ function SeatCard({
           </div>
         </div>
       </div>
-      {laidMelds && laidMelds.length > 0 ? (
+      {canShowHand ? (
         <div className="mt-1 flex w-full flex-col items-center gap-1">
           <button
             type="button"
@@ -848,12 +858,15 @@ function SeatCard({
             className="w-full rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
             aria-expanded={meldsOpen}
           >
-            Show hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
+            {laidMelds && laidMelds.length > 0
+              ? `Show hand · ${laidMelds.length} meld${laidMelds.length === 1 ? "" : "s"} · ${meldCount}`
+              : `Show hand · ${hand?.length} card${hand?.length === 1 ? "" : "s"}`}
           </button>
           {meldsOpen && (
             <LaidMeldsDialog
               name={name}
               laidMelds={laidMelds}
+              hand={hand}
               wildRank={wildRank}
               onClose={() => setMeldsOpen(false)}
             />
@@ -897,11 +910,13 @@ function SeatCard({
 function LaidMeldsDialog({
   name,
   laidMelds,
+  hand,
   wildRank,
   onClose,
 }: {
   name: string;
-  laidMelds: string[][];
+  laidMelds?: string[][];
+  hand?: string[];
   wildRank: string | null;
   onClose: () => void;
 }) {
@@ -910,6 +925,7 @@ function LaidMeldsDialog({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+  const displayCards = hand && hand.length > 0 ? sortHand(hand, wildRank) : [];
   if (typeof document === "undefined") return null;
   return createPortal(
     <div
@@ -929,7 +945,11 @@ function LaidMeldsDialog({
           <div>
             <h2 className="font-serif text-lg font-bold text-amber-100 sm:text-xl">{name}'s hand</h2>
             <p className="text-[11px] uppercase tracking-wider text-white/60">
-              {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} laid down
+              {laidMelds && laidMelds.length > 0
+                ? `${laidMelds.length} meld${laidMelds.length === 1 ? "" : "s"} laid down`
+                : hand && hand.length > 0
+                  ? `${hand.length} card${hand.length === 1 ? "" : "s"} remaining`
+                  : "No cards to show"}
             </p>
           </div>
           <button
@@ -939,17 +959,26 @@ function LaidMeldsDialog({
             Close
           </button>
         </div>
-        <div className="flex flex-wrap items-start justify-center gap-3">
-          {laidMelds.map((meld, i) => (
-            <div key={i} className="rounded-lg bg-emerald-900/50 px-2 py-1 ring-1 ring-amber-300/40">
-              <div className="flex -space-x-6 sm:-space-x-8">
-                {orderMeldForDisplay(meld, wildRank).map((c) => (
-                  <PlayingCard key={c} id={c} wildRank={wildRank} />
-                ))}
+        {laidMelds && laidMelds.length > 0 && (
+          <div className="flex flex-wrap items-start justify-center gap-3">
+            {laidMelds.map((meld, i) => (
+              <div key={i} className="rounded-lg bg-emerald-900/50 px-2 py-1 ring-1 ring-amber-300/40">
+                <div className="flex -space-x-6 sm:-space-x-8">
+                  {orderMeldForDisplay(meld, wildRank).map((c) => (
+                    <PlayingCard key={c} id={c} wildRank={wildRank} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
+        {displayCards.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-start justify-center gap-2">
+            {displayCards.map((c) => (
+              <PlayingCard key={c} id={c} wildRank={wildRank} />
+            ))}
+          </div>
+        )}
       </motion.div>
     </div>,
     document.body,
