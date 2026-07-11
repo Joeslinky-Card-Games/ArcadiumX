@@ -158,6 +158,9 @@ function LobbyView({
   onStart,
   starting,
   startError,
+  onSendChat,
+  chatPending,
+  chatError,
 }: {
   match: MatchView;
   userId: string;
@@ -165,6 +168,9 @@ function LobbyView({
   onStart: () => void;
   starting: boolean;
   startError: string | null;
+  onSendChat: (text: string) => void;
+  chatPending: boolean;
+  chatError: string | null;
 }) {
   const isCreator = match.createdBy === userId;
   const minPlayers = match.minPlayers ?? 2;
