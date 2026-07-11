@@ -130,6 +130,12 @@ export type CreateMatchPayload = {
   maxPlayers: number;
   visibility?: "public" | "private";
   password?: string;
+  displayName?: string;
+  avatarUrl?: string;
 };
 
-export type JoinMatchPayload = { password?: string };
+export type JoinMatchPayload = {
+  password?: string;
+  displayName?: string;
+  avatarUrl?: string;
+};
