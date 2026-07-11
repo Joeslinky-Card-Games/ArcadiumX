@@ -465,11 +465,6 @@ function GameView({
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
                         style={{ marginLeft: i === 0 ? 0 : -34, zIndex: i }}
-                        className={
-                          pickingGoOutDiscard && goOutDiscardChoices.has(c)
-                            ? "rounded-lg ring-2 ring-amber-300 ring-offset-2 ring-offset-emerald-900"
-                            : undefined
-                        }
                       >
                         <PlayingCard
                           id={c}
