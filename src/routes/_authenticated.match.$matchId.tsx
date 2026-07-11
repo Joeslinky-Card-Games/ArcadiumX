@@ -273,13 +273,36 @@ function GameView({
   const canLayDown = arrangement.complete && arrangement.discard !== null && isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
   const canDiscard = isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
 
+  const goOutOptions = arrangement.goOutOptions ?? [];
+  const [pickingGoOutDiscard, setPickingGoOutDiscard] = useState(false);
+  const goOutDiscardChoices = useMemo(
+    () => new Set(goOutOptions.map((o) => o.discard)),
+    [goOutOptions],
+  );
+
+  // Reset the picker if the state that gates it changes.
+  useEffect(() => {
+    if (!canLayDown || goOutOptions.length <= 1) setPickingGoOutDiscard(false);
+  }, [canLayDown, goOutOptions.length]);
+
   const handleCardClick = (card: string) => {
+    if (pickingGoOutDiscard) {
+      const chosen = goOutOptions.find((o) => o.discard === card);
+      if (!chosen) return;
+      setPickingGoOutDiscard(false);
+      onAction({ type: "lay-down", melds: chosen.melds, discard: chosen.discard });
+      return;
+    }
     if (!canDiscard) return;
     onAction({ type: "discard", card });
   };
 
   const handleLayDown = () => {
     if (!arrangement.complete || !arrangement.goOutMelds || !arrangement.goOutDiscard) return;
+    if (goOutOptions.length > 1) {
+      setPickingGoOutDiscard(true);
+      return;
+    }
     onAction({
       type: "lay-down",
       melds: arrangement.goOutMelds,
