@@ -244,6 +244,9 @@ function GameView({
   onNextRound,
   pending,
   actionError,
+  onSendChat,
+  chatPending,
+  chatError,
 }: {
   match: MatchView;
   userId: string;
@@ -252,6 +255,9 @@ function GameView({
   onNextRound: () => void;
   pending: boolean;
   actionError: string | null;
+  onSendChat: (text: string) => void;
+  chatPending: boolean;
+  chatError: string | null;
 }) {
   const order = match._order ?? match.players;
   const currentUser = order[(match.turn ?? 0) % order.length];
