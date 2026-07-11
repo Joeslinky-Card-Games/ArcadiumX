@@ -78,6 +78,7 @@ function MatchPage() {
   const api = useApi();
   const qc = useQueryClient();
   const identity = useClerkIdentity();
+  const navigate = useNavigate();
 
   const query = useQuery({
     queryKey: ["match", matchId],
