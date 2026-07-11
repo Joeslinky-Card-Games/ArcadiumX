@@ -345,6 +345,14 @@ function GameView({
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
 
+  // Hand visibility toggle — collapsed by default on small screens so the
+  // table (opponents, stock, discard) isn't hidden behind the hand row.
+  const [handOpen, setHandOpen] = useState(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setHandOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
+
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
