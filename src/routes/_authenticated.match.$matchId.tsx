@@ -1015,6 +1015,63 @@ function LaidMeldsDialog({
 }
 
 function RoundSummary({
+  // placeholder
+}
+
+function WentOutAnnouncement({
+  name,
+  isSelf,
+  remaining,
+  onClose,
+}: {
+  name: string;
+  isSelf: boolean;
+  remaining: number;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <motion.div
+        initial={{ scale: 0.85, opacity: 0, y: -20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-3xl border-2 border-amber-300/60 bg-gradient-to-br from-emerald-900 to-emerald-950 p-6 text-center text-white shadow-[0_0_60px_rgba(251,191,36,0.4)]"
+      >
+        <div className="mb-2 text-5xl">🎉</div>
+        <h2 className="font-serif text-2xl font-bold text-amber-100">
+          {isSelf ? "You went out!" : `${name} went out!`}
+        </h2>
+        <p className="mt-2 text-sm text-white/80">
+          {remaining > 0
+            ? `Everyone else has ${remaining === 1 ? "one final turn" : `${remaining} final turn${remaining === 1 ? "" : "s"}`} before the round ends.`
+            : "The round is ending now."}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-5 rounded-full bg-amber-400 px-6 py-2 text-sm font-bold uppercase tracking-wider text-emerald-950 shadow hover:bg-amber-300"
+        >
+          Got it
+        </button>
+      </motion.div>
+    </div>,
+    document.body,
+  );
+}
+
+function RoundSummary({
   match,
   userId,
   onNext,
