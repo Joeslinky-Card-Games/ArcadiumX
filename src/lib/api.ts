@@ -93,6 +93,7 @@ export type MatchView = Match & {
   laidMelds?: Record<string, string[][]>;
   winner?: string;
   chatMessages?: ChatMessage[];
+  playAgain?: string[];
   // eslint-disable-next-line @typescript-eslint/naming-convention
   _order?: string[];
 };
