@@ -420,6 +420,12 @@ function GameView({
           pending={pending}
         />
       )}
+
+      <RulesDialog
+        open={rulesOpen}
+        onOpenChange={setRulesOpen}
+        onDontShowAgain={dontShowAgain}
+      />
     </main>
   );
 }
