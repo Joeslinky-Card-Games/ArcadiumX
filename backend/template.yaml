@@ -166,6 +166,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MatchesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MatchCodesTable
       Events:
         Api:
           Type: HttpApi
@@ -205,6 +207,24 @@ Resources:
             ApiId: !Ref HttpApi
             Method: POST
             Path: /matches/{matchId}/join
+
+  JoinMatchByCodeFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/matches/join-by-code.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MatchesTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref MatchCodesTable
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /matches/join-by-code
 
   MatchActionFn:
     Type: AWS::Serverless::Function
