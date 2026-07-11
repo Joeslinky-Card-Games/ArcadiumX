@@ -440,10 +440,12 @@ function GameView({
               {sorted.length > 0 && unmelded.length === 0 && arrangement.melds.length > 0 && (
                 canLayDown ? (
                   <p className="self-center text-sm text-amber-200/80">All cards melded — lay down to go out.</p>
-                ) : (
+                ) : canDiscard ? (
                   <p className="self-center text-sm text-amber-200/80">
                     All cards fit into melds — tap a card to discard (a meld will be broken).
                   </p>
+                ) : (
+                  <p className="self-center text-sm text-amber-200/80">All cards fit into melds.</p>
                 )
               )}
             </div>
