@@ -818,13 +818,9 @@ function SeatCard({
   laidMelds?: string[][];
   wildRank: string | null;
 }) {
-  // Laid-down melds can crowd the table when several players go out — hide by
-  // default on small screens, expand on desktop, always toggleable.
+  // Laid-down melds crowd the table when several players go out — open in a
+  // full-screen modal on demand so nothing obstructs the table UI.
   const [meldsOpen, setMeldsOpen] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setMeldsOpen(window.matchMedia("(min-width: 640px)").matches);
-  }, []);
   const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
   return (
     <div
@@ -851,18 +847,15 @@ function SeatCard({
             className="rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
             aria-expanded={meldsOpen}
           >
-            {meldsOpen ? "Hide" : "Show"} hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
+            Show hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
           </button>
           {meldsOpen && (
-            <div className="flex flex-wrap items-center justify-center gap-1">
-              {laidMelds.map((meld, i) => (
-                <div key={i} className="flex -space-x-3">
-                  {orderMeldForDisplay(meld, wildRank).map((c) => (
-                    <PlayingCard key={c} id={c} wildRank={wildRank} size="sm" />
-                  ))}
-                </div>
-              ))}
-            </div>
+            <LaidMeldsDialog
+              name={name}
+              laidMelds={laidMelds}
+              wildRank={wildRank}
+              onClose={() => setMeldsOpen(false)}
+            />
           )}
         </div>
       ) : (
