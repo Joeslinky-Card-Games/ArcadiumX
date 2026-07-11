@@ -2,43 +2,43 @@ const { GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { ddb, tables } = require("../../lib/dynamo");
 const { ok, badRequest, notFound, forbidden, serverError } = require("../../lib/response");
 const { withAuth } = require("../../lib/auth");
-const { applyAction } = require("../../lib/game/engine");
+const { startMatch, startRound } = require("../../lib/game/engine");
 const { redactForUser } = require("../../lib/game/view");
 
 exports.handler = withAuth(async (event, { userId }) => {
   const matchId = event.pathParameters?.matchId;
-  let body;
-  try { body = JSON.parse(event.body || "{}"); } catch { return badRequest("Invalid JSON"); }
-  if (!body || typeof body.type !== "string") return badRequest("Missing action.type");
-
   try {
     const res = await ddb.send(new GetCommand({ TableName: tables.matches, Key: { matchId } }));
     if (!res.Item) return notFound();
     const match = res.Item;
-    if (!Array.isArray(match.players) || !match.players.includes(userId)) {
-      return forbidden("Not a player in this match");
-    }
-    const expectedVersion = match.version ?? 0;
+    if (match.createdBy !== userId) return forbidden("Only the creator can start the match");
+    if (match.status !== "open") return badRequest("Match is not open");
+    const minPlayers = match.minPlayers ?? 2;
+    if (match.players.length < minPlayers) return badRequest(`Need at least ${minPlayers} players`);
 
-    let next;
-    try {
-      next = applyAction(match, userId, body);
-    } catch (err) {
-      return badRequest(err.message);
-    }
+    const expectedVersion = match.version ?? 0;
+    const base = startMatch({ matchId: match.matchId, players: match.players });
+    const dealt = startRound(base, 1);
+    // Preserve lobby metadata + bump version.
+    const next = {
+      ...match,
+      ...dealt,
+      version: expectedVersion + 1,
+    };
 
     try {
       await ddb.send(
         new PutCommand({
           TableName: tables.matches,
           Item: next,
-          ConditionExpression: "version = :v",
-          ExpressionAttributeValues: { ":v": expectedVersion },
+          ConditionExpression: "version = :v AND #s = :open",
+          ExpressionAttributeNames: { "#s": "status" },
+          ExpressionAttributeValues: { ":v": expectedVersion, ":open": "open" },
         })
       );
     } catch (err) {
       if (err.name === "ConditionalCheckFailedException") {
-        return badRequest("Stale match state, please retry");
+        return badRequest("Match already started or state changed");
       }
       throw err;
     }

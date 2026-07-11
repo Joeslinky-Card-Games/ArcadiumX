@@ -11,9 +11,9 @@ exports.handler = withAuth(async (event, { userId }) => {
         TableName: tables.matches,
         Key: { matchId },
         ConditionExpression: "attribute_exists(matchId) AND #s = :open AND size(players) < maxPlayers AND NOT contains(players, :uid)",
-        UpdateExpression: "SET players = list_append(players, :p)",
+        UpdateExpression: "SET players = list_append(players, :p) ADD version :one",
         ExpressionAttributeNames: { "#s": "status" },
-        ExpressionAttributeValues: { ":open": "open", ":uid": userId, ":p": [userId] },
+        ExpressionAttributeValues: { ":open": "open", ":uid": userId, ":p": [userId], ":one": 1 },
         ReturnValues: "ALL_NEW",
       })
     );
