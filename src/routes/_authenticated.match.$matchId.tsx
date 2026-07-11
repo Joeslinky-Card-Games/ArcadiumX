@@ -1106,7 +1106,7 @@ function LaidMeldsDialog({
         {handMelds.length > 0 && (
           <div className="mt-4">
             <div className="mb-2 text-[10px] uppercase tracking-wider text-white/50">
-              Potential melds in hand
+              Melds
             </div>
             <div className="flex flex-wrap items-start justify-center gap-3">
               {handMelds.map((meld, i) => (
