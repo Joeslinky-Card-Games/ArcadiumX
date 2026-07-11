@@ -9,6 +9,21 @@ import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingC
 import { sortHand, cardPoints } from "@/lib/game/cards";
 import { autoArrange, orderMeldForDisplay } from "@/lib/game/melds";
 import { RulesDialog } from "@/components/game/RulesDialog";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId")({
   head: () => ({
@@ -302,6 +317,37 @@ function GameView({
   const meldedIds = useMemo(() => new Set(arrangement.melds.flat()), [arrangement]);
   const unmelded = useMemo(() => sorted.filter((c) => !meldedIds.has(c)), [sorted, meldedIds]);
   const unmeldedScore = unmelded.reduce((s, c) => s + cardPoints(c), 0);
+
+  // Manual drag-and-drop ordering of unmelded cards. The user's ordering wins
+  // for any card they've touched; anything else falls back to the auto-sorted
+  // order. New cards (drawn from stock/discard) append at the end so they
+  // don't jump around inside a custom sort.
+  const [manualOrder, setManualOrder] = useState<string[]>([]);
+  useEffect(() => {
+    setManualOrder((prev) => prev.filter((c) => myHand.includes(c)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myHand.join("|")]);
+  const orderedUnmelded = useMemo(() => {
+    const inUnmelded = new Set(unmelded);
+    const kept = manualOrder.filter((c) => inUnmelded.has(c));
+    const rest = unmelded.filter((c) => !manualOrder.includes(c));
+    return [...kept, ...rest];
+  }, [unmelded, manualOrder]);
+  const hasCustomSort = manualOrder.length > 0;
+
+  const dragSensors = useSensors(
+    // Small activation distance so single-tap still fires the discard click.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = orderedUnmelded.indexOf(String(active.id));
+    const newIdx = orderedUnmelded.indexOf(String(over.id));
+    if (oldIdx < 0 || newIdx < 0) return;
+    setManualOrder(arrayMove(orderedUnmelded, oldIdx, newIdx));
+  };
+
   const canLayDown = arrangement.complete && arrangement.discard !== null && isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
   const canDiscard = isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
 
@@ -435,6 +481,15 @@ function GameView({
               Lay down · go out
             </button>
           )}
+          {hasCustomSort && (
+            <button
+              onClick={() => setManualOrder([])}
+              className="rounded-md border border-white/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/70 hover:bg-white/10 hover:text-white"
+              title="Return to auto-sorted order"
+            >
+              Reset sort
+            </button>
+          )}
         </div>
 
         <LayoutGroup>
@@ -472,22 +527,22 @@ function GameView({
                   </motion.div>
                   );
                 })}
-                {unmelded.map((c) => (
-                  <motion.div
-                    key={c}
-                    layoutId={`card-${c}`}
-                    initial={{ y: -140, opacity: 0, rotate: -8 }}
-                    animate={{ y: 0, opacity: 1, rotate: 0 }}
-                    exit={{ y: 120, opacity: 0, rotate: 6, scale: 0.85 }}
-                    transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                  >
-                    <PlayingCard
-                      id={c}
-                      wildRank={wildRank}
-                      onClick={() => handleCardClick(c)}
-                    />
-                  </motion.div>
-                ))}
+                <DndContext
+                  sensors={dragSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={orderedUnmelded} strategy={horizontalListSortingStrategy}>
+                    {orderedUnmelded.map((c) => (
+                      <SortableCard
+                        key={c}
+                        id={c}
+                        wildRank={wildRank}
+                        onClick={() => handleCardClick(c)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </AnimatePresence>
               {sorted.length === 0 && <p className="self-center text-sm text-white/60">No cards in hand.</p>}
               {sorted.length > 0 && unmelded.length === 0 && arrangement.melds.length > 0 && (
@@ -962,6 +1017,31 @@ function ChatPanel({
           </span>
         )}
       </button>
+    </div>
+  );
+}
+
+function SortableCard({
+  id,
+  wildRank,
+  onClick,
+}: {
+  id: string;
+  wildRank: string | null;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+    cursor: isDragging ? "grabbing" : "grab",
+    touchAction: "none",
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <PlayingCard id={id} wildRank={wildRank} onClick={onClick} />
     </div>
   );
 }
