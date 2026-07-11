@@ -2,6 +2,7 @@ const { buildDeck, shuffle } = require("./deck");
 const { handSizeForRound, wildRankForRound } = require("./cards");
 const { validateGoingOut } = require("./melds");
 const { scoreHand } = require("./score");
+const { minUnmeldedPoints } = require("./autoMeld");
 
 const TOTAL_ROUNDS = 13;
 
@@ -153,7 +154,13 @@ function maybeFinalize(state) {
 function finalizeRound(state) {
   const deltas = {};
   for (const p of state.players) {
-    deltas[p] = p === state.goneOutBy ? 0 : scoreHand(state.hands[p] || []);
+    if (p === state.goneOutBy) {
+      deltas[p] = 0;
+    } else {
+      // Score using the best possible meld arrangement so players who did not
+      // formally lay down are not penalized for cards that could have been melded.
+      deltas[p] = minUnmeldedPoints(state.hands[p] || [], state.wildRank);
+    }
     state.scores[p] += deltas[p];
   }
   state.lastRoundScores = deltas;
