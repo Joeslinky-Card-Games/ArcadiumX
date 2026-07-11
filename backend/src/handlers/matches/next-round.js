@@ -4,6 +4,7 @@ const { ok, badRequest, notFound, forbidden, serverError } = require("../../lib/
 const { withAuth } = require("../../lib/auth");
 const { nextRound } = require("../../lib/game/engine");
 const { redactForUser } = require("../../lib/game/view");
+const { withRefreshedTtl } = require("../../lib/matches");
 
 exports.handler = withAuth(async (event, { userId }) => {
   const matchId = event.pathParameters?.matchId;
@@ -17,8 +18,9 @@ exports.handler = withAuth(async (event, { userId }) => {
     if (match.status !== "round-complete") return badRequest("Round is not complete");
 
     const expectedVersion = match.version ?? 0;
-    const next = nextRound(match);
+    let next = nextRound(match);
     next.version = expectedVersion + 1;
+    next = withRefreshedTtl(next);
 
     try {
       await ddb.send(
