@@ -825,27 +825,27 @@ function SeatCard({
   const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
   return (
     <div
-      className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 backdrop-blur transition-all ${
+      className={`flex w-max min-w-[10rem] flex-col items-center gap-1 rounded-xl px-3 py-2 backdrop-blur transition-all ${
         isTurn
           ? "bg-amber-400/15 shadow-[0_0_24px_rgba(251,191,36,0.5)] ring-2 ring-amber-300"
           : "bg-black/40 ring-1 ring-white/10"
       }`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <Avatar name={name} userId={userId} imageUrl={imageUrl} />
-        <div className="text-left leading-tight">
-          <div className="max-w-[8rem] truncate text-sm font-semibold text-white">{name}</div>
+        <div className="min-w-0 text-left leading-tight">
+          <div className="break-words text-sm font-semibold text-white">{name}</div>
           <div className="text-[10px] uppercase tracking-wider text-white/60">
             total <span className="text-amber-200">{score}</span>
           </div>
         </div>
       </div>
       {laidMelds && laidMelds.length > 0 ? (
-        <div className="mt-1 flex flex-col items-center gap-1">
+        <div className="mt-1 flex w-full flex-col items-center gap-1">
           <button
             type="button"
             onClick={() => setMeldsOpen((v) => !v)}
-            className="rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
+            className="w-full rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
             aria-expanded={meldsOpen}
           >
             Show hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
