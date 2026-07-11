@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@clerk/tanstack-react-start";
-import { useApi, type GameAction, type MatchView } from "@/lib/api";
+import { useApi, type GameAction, type MatchView, type ChatMessage } from "@/lib/api";
 import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
@@ -103,6 +103,13 @@ function MatchPage() {
     mutationFn: () => api<MatchView>(`/matches/${matchId}/next-round`, { method: "POST" }),
     onSuccess: (data) => { qc.setQueryData(["match", matchId], data); },
   });
+  const chatMut = useMutation({
+    mutationFn: (text: string) =>
+      api<MatchView>(`/matches/${matchId}/chat`, { method: "POST", body: { text } }),
+    onSuccess: (data) => { qc.setQueryData(["match", matchId], data); },
+  });
+  const chatError = chatMut.error instanceof Error ? chatMut.error.message : null;
+  const sendChat = (text: string) => chatMut.mutate(text);
 
   if (query.isLoading) return <Centered>Loading match…</Centered>;
   if (query.error) return <Centered>Failed to load match. <button className="underline" onClick={invalidate}>Retry</button></Centered>;
@@ -117,6 +124,9 @@ function MatchPage() {
         onStart={() => startMut.mutate()}
         starting={startMut.isPending}
         startError={startMut.error instanceof Error ? startMut.error.message : null}
+        onSendChat={sendChat}
+        chatPending={chatMut.isPending}
+        chatError={chatError}
       />
     );
   }
@@ -130,6 +140,9 @@ function MatchPage() {
       onNextRound={() => nextRoundMut.mutate()}
       pending={actionMut.isPending || nextRoundMut.isPending}
       actionError={actionMut.error instanceof Error ? actionMut.error.message : null}
+      onSendChat={sendChat}
+      chatPending={chatMut.isPending}
+      chatError={chatError}
     />
   );
 }
