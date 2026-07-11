@@ -63,6 +63,9 @@ Resources:
             - { AttributeName: status, KeyType: HASH }
             - { AttributeName: createdAt, KeyType: RANGE }
           Projection: { ProjectionType: ALL }
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   StatsTable:
     Type: AWS::DynamoDB::Table

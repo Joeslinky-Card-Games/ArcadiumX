@@ -4,7 +4,7 @@ const { ddb, tables } = require("../../lib/dynamo");
 const { created, badRequest, serverError } = require("../../lib/response");
 const { withAuth } = require("../../lib/auth");
 const { byId } = require("../../lib/games");
-const { hashPassword, stripSecret, validatePassword } = require("../../lib/matches");
+const { hashPassword, stripSecret, validatePassword, ttlForStatus } = require("../../lib/matches");
 
 function displayName(userId, claims) {
   return (
@@ -55,6 +55,7 @@ exports.handler = withAuth(async (event, { userId, claims }) => {
     version: 0,
     visibility,
     ...(passwordHash ? { passwordHash } : {}),
+    ttl: ttlForStatus("open"),
   };
   try {
     await ddb.send(new PutCommand({ TableName: tables.matches, Item: match }));
