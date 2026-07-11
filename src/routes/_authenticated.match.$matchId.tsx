@@ -369,7 +369,13 @@ function GameView({
               </AnimatePresence>
               {sorted.length === 0 && <p className="self-center text-sm text-white/60">No cards in hand.</p>}
               {sorted.length > 0 && unmelded.length === 0 && arrangement.melds.length > 0 && (
-                <p className="self-center text-sm text-amber-200/80">All cards melded — lay down to go out.</p>
+                canLayDown ? (
+                  <p className="self-center text-sm text-amber-200/80">All cards melded — lay down to go out.</p>
+                ) : (
+                  <p className="self-center text-sm text-amber-200/80">
+                    All cards fit into melds — tap a card to discard (a meld will be broken).
+                  </p>
+                )
               )}
             </div>
           </div>
