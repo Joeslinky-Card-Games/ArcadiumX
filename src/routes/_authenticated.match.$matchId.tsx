@@ -859,7 +859,7 @@ function SeatCard({
   wentOut,
   laidMelds,
   hand,
-  roundComplete,
+  handVisible,
   wildRank,
 }: {
   name: string;
@@ -871,14 +871,14 @@ function SeatCard({
   wentOut: boolean;
   laidMelds?: string[][];
   hand?: string[];
-  roundComplete: boolean;
+  handVisible: boolean;
   wildRank: string | null;
 }) {
   // Laid-down melds and final hands crowd the table when several players go
   // out — open in a full-screen modal on demand so nothing obstructs the table UI.
   const [meldsOpen, setMeldsOpen] = useState(false);
   const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
-  const canShowHand = (laidMelds && laidMelds.length > 0) || (roundComplete && hand && hand.length > 0);
+  const canShowHand = (laidMelds && laidMelds.length > 0) || (handVisible && hand && hand.length > 0);
   return (
     <div
       className={`flex w-max min-w-[10rem] flex-col items-center gap-1 rounded-xl px-3 py-2 backdrop-blur transition-all ${
