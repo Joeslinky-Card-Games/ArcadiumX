@@ -619,6 +619,15 @@ function GameView({
           onPick={handlePickOption}
         />
       )}
+      {pendingDiscard && (
+        <DiscardConfirm
+          card={pendingDiscard}
+          wildRank={wildRank}
+          pending={pending}
+          onCancel={() => setPendingDiscard(null)}
+          onConfirm={confirmDiscard}
+        />
+      )}
       <ChatPanel
         match={match}
         userId={userId}
