@@ -166,24 +166,22 @@ function cover(
   target: number,
   candidates: { mask: number; cards: string[] }[],
 ): { mask: number; cards: string[] }[] | null {
-  // Restrict to candidates fitting inside target.
   const usable = candidates.filter((c) => (c.mask & ~target) === 0);
-  if (usable.length === 0) return target === 0 ? [] : null;
-  // DFS on lowest remaining bit.
-  const memo = new Set<number>();
-  const stack: { rem: number; picked: number[] }[] = [{ rem: target, picked: [] }];
-  while (stack.length) {
-    const { rem, picked } = stack.pop()!;
-    if (rem === 0) return picked.map((i) => usable[i]);
-    if (memo.has(rem)) continue;
-    memo.add(rem);
+  if (target === 0) return [];
+  if (usable.length === 0) return null;
+  const failed = new Set<number>();
+  const rec = (rem: number): { mask: number; cards: string[] }[] | null => {
+    if (rem === 0) return [];
+    if (failed.has(rem)) return null;
     const lowBit = rem & -rem;
-    for (let i = 0; i < usable.length; i++) {
-      const cand = usable[i];
-      if ((cand.mask & lowBit) !== 0 && (cand.mask & rem) === cand.mask) {
-        stack.push({ rem: rem ^ cand.mask, picked: [...picked, i] });
-      }
+    for (const cand of usable) {
+      if ((cand.mask & lowBit) === 0) continue;
+      if ((cand.mask & rem) !== cand.mask) continue;
+      const sub = rec(rem ^ cand.mask);
+      if (sub) return [cand, ...sub];
     }
-  }
-  return null;
+    failed.add(rem);
+    return null;
+  };
+  return rec(target);
 }
