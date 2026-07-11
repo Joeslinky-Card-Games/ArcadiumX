@@ -345,14 +345,6 @@ function GameView({
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
 
-  // Hand visibility toggle — collapsed by default on small screens so the
-  // table (opponents, stock, discard) isn't hidden behind the hand row.
-  const [handOpen, setHandOpen] = useState(true);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setHandOpen(window.matchMedia("(min-width: 640px)").matches);
-  }, []);
-
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -509,17 +501,7 @@ function GameView({
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-200/70">
             Hand Score: <b className="text-amber-100">{unmeldedScore}</b>
-            <span className="ml-2 text-white/60 normal-case tracking-normal">
-              · {sorted.length} card{sorted.length === 1 ? "" : "s"}
-            </span>
           </h2>
-          <button
-            onClick={() => setHandOpen((v) => !v)}
-            className="rounded-md border border-white/15 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/80 hover:bg-white/10 hover:text-white"
-            aria-expanded={handOpen}
-          >
-            {handOpen ? "Hide hand" : "Show hand"}
-          </button>
           {canLayDown && (
             <button
               onClick={handleLayDown}
@@ -540,7 +522,7 @@ function GameView({
           )}
         </div>
 
-        {handOpen && <LayoutGroup>
+        <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
           <div className="rounded-xl border border-white/10 bg-black/25 p-2 backdrop-blur sm:p-3">
             <div className="flex min-h-[6rem] flex-wrap items-end justify-center gap-x-2 gap-y-3 sm:min-h-[7rem] sm:gap-x-6">
@@ -608,7 +590,7 @@ function GameView({
               )}
             </div>
           </div>
-        </LayoutGroup>}
+        </LayoutGroup>
       </section>
       </div>
 
@@ -836,6 +818,14 @@ function SeatCard({
   laidMelds?: string[][];
   wildRank: string | null;
 }) {
+  // Laid-down melds can crowd the table when several players go out — hide by
+  // default on small screens, expand on desktop, always toggleable.
+  const [meldsOpen, setMeldsOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setMeldsOpen(window.matchMedia("(min-width: 640px)").matches);
+  }, []);
+  const meldCount = laidMelds?.reduce((s, m) => s + m.length, 0) ?? 0;
   return (
     <div
       className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 backdrop-blur transition-all ${
@@ -854,14 +844,26 @@ function SeatCard({
         </div>
       </div>
       {laidMelds && laidMelds.length > 0 ? (
-        <div className="mt-1 flex flex-wrap items-center justify-center gap-1">
-          {laidMelds.map((meld, i) => (
-            <div key={i} className="flex -space-x-3">
-              {orderMeldForDisplay(meld, wildRank).map((c) => (
-                <PlayingCard key={c} id={c} wildRank={wildRank} size="sm" />
+        <div className="mt-1 flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMeldsOpen((v) => !v)}
+            className="rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
+            aria-expanded={meldsOpen}
+          >
+            {meldsOpen ? "Hide" : "Show"} hand · {laidMelds.length} meld{laidMelds.length === 1 ? "" : "s"} · {meldCount}
+          </button>
+          {meldsOpen && (
+            <div className="flex flex-wrap items-center justify-center gap-1">
+              {laidMelds.map((meld, i) => (
+                <div key={i} className="flex -space-x-3">
+                  {orderMeldForDisplay(meld, wildRank).map((c) => (
+                    <PlayingCard key={c} id={c} wildRank={wildRank} size="sm" />
+                  ))}
+                </div>
               ))}
             </div>
-          ))}
+          )}
         </div>
       ) : (
       <div className="relative mt-1 flex h-8 items-center justify-center">
