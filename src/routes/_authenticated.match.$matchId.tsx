@@ -273,13 +273,36 @@ function GameView({
   const canLayDown = arrangement.complete && arrangement.discard !== null && isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
   const canDiscard = isMyTurn && Boolean(match.hasDrawn) && !roundComplete && !matchComplete;
 
+  const goOutOptions = arrangement.goOutOptions ?? [];
+  const [pickingGoOutDiscard, setPickingGoOutDiscard] = useState(false);
+  const goOutDiscardChoices = useMemo(
+    () => new Set(goOutOptions.map((o) => o.discard)),
+    [goOutOptions],
+  );
+
+  // Reset the picker if the state that gates it changes.
+  useEffect(() => {
+    if (!canLayDown || goOutOptions.length <= 1) setPickingGoOutDiscard(false);
+  }, [canLayDown, goOutOptions.length]);
+
   const handleCardClick = (card: string) => {
+    if (pickingGoOutDiscard) {
+      const chosen = goOutOptions.find((o) => o.discard === card);
+      if (!chosen) return;
+      setPickingGoOutDiscard(false);
+      onAction({ type: "lay-down", melds: chosen.melds, discard: chosen.discard });
+      return;
+    }
     if (!canDiscard) return;
     onAction({ type: "discard", card });
   };
 
   const handleLayDown = () => {
     if (!arrangement.complete || !arrangement.goOutMelds || !arrangement.goOutDiscard) return;
+    if (goOutOptions.length > 1) {
+      setPickingGoOutDiscard(true);
+      return;
+    }
     onAction({
       type: "lay-down",
       melds: arrangement.goOutMelds,
@@ -353,9 +376,11 @@ function GameView({
           <span className="text-amber-200">Your turn — {
             !match.hasDrawn
               ? "draw a card"
-              : canLayDown
-                ? "tap a card to discard, or lay down to go out"
-                : "tap a card to discard"
+              : pickingGoOutDiscard
+                ? "tap one of the highlighted cards to discard and go out"
+                : canLayDown
+                  ? "tap a card to discard, or lay down to go out"
+                  : "tap a card to discard"
           }.</span>
         ) : (
           <span className="text-white/70">Waiting on {displayName(match, currentUser, userId)}…</span>
@@ -382,7 +407,15 @@ function GameView({
               disabled={pending}
               className="rounded-md bg-amber-400 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-emerald-950 shadow-[0_0_16px_rgba(251,191,36,0.6)] hover:bg-amber-300 disabled:opacity-40"
             >
-              Lay down · go out
+              {pickingGoOutDiscard ? "Choose card to discard…" : "Lay down · go out"}
+            </button>
+          )}
+          {pickingGoOutDiscard && (
+            <button
+              onClick={() => setPickingGoOutDiscard(false)}
+              className="rounded-md border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/10"
+            >
+              Cancel
             </button>
           )}
         </div>
@@ -411,6 +444,11 @@ function GameView({
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
                         style={{ marginLeft: i === 0 ? 0 : -34, zIndex: i }}
+                        className={
+                          pickingGoOutDiscard && goOutDiscardChoices.has(c)
+                            ? "rounded-lg ring-2 ring-amber-300 ring-offset-2 ring-offset-emerald-900"
+                            : undefined
+                        }
                       >
                         <PlayingCard
                           id={c}
@@ -430,6 +468,11 @@ function GameView({
                     animate={{ y: 0, opacity: 1, rotate: 0 }}
                     exit={{ y: 120, opacity: 0, rotate: 6, scale: 0.85 }}
                     transition={{ type: "spring", stiffness: 260, damping: 22 }}
+                    className={
+                      pickingGoOutDiscard && goOutDiscardChoices.has(c)
+                        ? "rounded-lg ring-2 ring-amber-300 ring-offset-2 ring-offset-black/40"
+                        : undefined
+                    }
                   >
                     <PlayingCard
                       id={c}
