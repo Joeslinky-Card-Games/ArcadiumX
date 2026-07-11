@@ -89,6 +89,100 @@ export function validateMeld(cards: string[], wildRank: string | null | undefine
   return validateSet(cards, wildRank) || validateRun(cards, wildRank);
 }
 
+// Reorder a valid meld's cards for display.
+// Runs are ordered low → high with wilds filling their assigned slots.
+// Sets keep naturals first, then wilds. Invalid melds are returned as-is.
+export function orderMeldForDisplay(
+  cards: string[],
+  wildRank: string | null | undefined,
+): string[] {
+  if (cards.length < 3) return cards.slice();
+  if (validateRun(cards, wildRank)) {
+    const ordered = orderRun(cards, wildRank);
+    if (ordered) return ordered;
+  }
+  if (validateSet(cards, wildRank)) {
+    // Naturals first (stable), wilds last.
+    const naturals: string[] = [];
+    const wilds: string[] = [];
+    for (const id of cards) {
+      const p = parseCard(id);
+      if (p.joker || (wildRank && !p.joker && p.rank === wildRank)) wilds.push(id);
+      else naturals.push(id);
+    }
+    return [...naturals, ...wilds];
+  }
+  return cards.slice();
+}
+
+function orderRun(cards: string[], wildRank: string | null | undefined): string[] | null {
+  const parsed = cards.map(parseCard);
+  const L = cards.length;
+  const flex: number[] = [];
+  for (let i = 0; i < parsed.length; i++) {
+    const c = parsed[i];
+    if (!c.joker && wildRank && c.rank === wildRank) flex.push(i);
+  }
+  const nFlex = flex.length;
+  for (let mask = 0; mask < 1 << nFlex; mask++) {
+    const wilds: { idx: number }[] = [];
+    const naturals: { idx: number; c: ParsedCard }[] = [];
+    for (let i = 0; i < parsed.length; i++) {
+      const c = parsed[i];
+      if (c.joker) { wilds.push({ idx: i }); continue; }
+      const flexIdx = flex.indexOf(i);
+      if (flexIdx >= 0) {
+        const asNatural = ((mask >> flexIdx) & 1) === 1;
+        if (asNatural) naturals.push({ idx: i, c });
+        else wilds.push({ idx: i });
+      } else {
+        naturals.push({ idx: i, c });
+      }
+    }
+    if (naturals.length <= wilds.length) continue;
+    const suits = new Set(naturals.map((n) => (n.c as { suit: string }).suit));
+    if (suits.size !== 1) continue;
+
+    const fixed: { slot: number; idx: number }[] = [];
+    const aces: { idx: number }[] = [];
+    let dup = false;
+    const seen = new Set<number>();
+    for (const n of naturals) {
+      const rank = (n.c as { rank: string }).rank;
+      if (rank === "A") { aces.push({ idx: n.idx }); continue; }
+      const p = RANK_ORDER[rank as keyof typeof RANK_ORDER];
+      if (seen.has(p)) { dup = true; break; }
+      seen.add(p);
+      fixed.push({ slot: p, idx: n.idx });
+    }
+    if (dup) continue;
+
+    for (let start = 1; start + L - 1 <= 14; start++) {
+      const end = start + L - 1;
+      const slotToIdx = new Map<number, number>();
+      let ok = true;
+      for (const f of fixed) {
+        if (f.slot < start || f.slot > end || slotToIdx.has(f.slot)) { ok = false; break; }
+        slotToIdx.set(f.slot, f.idx);
+      }
+      if (!ok) continue;
+      const aceSlots: number[] = [];
+      if (1 >= start && 1 <= end && !slotToIdx.has(1)) aceSlots.push(1);
+      if (14 >= start && 14 <= end && !slotToIdx.has(14)) aceSlots.push(14);
+      if (aces.length > aceSlots.length) continue;
+      for (let i = 0; i < aces.length; i++) slotToIdx.set(aceSlots[i], aces[i].idx);
+      const emptySlots: number[] = [];
+      for (let s = start; s <= end; s++) if (!slotToIdx.has(s)) emptySlots.push(s);
+      if (emptySlots.length !== wilds.length) continue;
+      for (let i = 0; i < emptySlots.length; i++) slotToIdx.set(emptySlots[i], wilds[i].idx);
+      const out: string[] = [];
+      for (let s = start; s <= end; s++) out.push(cards[slotToIdx.get(s)!]);
+      return out;
+    }
+  }
+  return null;
+}
+
 // -------- Auto-arrange solver --------
 
 function combinations(arr: number[], k: number): number[][] {
