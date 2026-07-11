@@ -258,6 +258,22 @@ Resources:
             Method: POST
             Path: /matches/{matchId}/chat
 
+  PlayAgainFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/matches/play-again.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MatchesTable
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /matches/{matchId}/play-again
+
   MatchActionFn:
     Type: AWS::Serverless::Function
     Properties:
