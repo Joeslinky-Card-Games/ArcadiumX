@@ -991,7 +991,7 @@ function SeatCard({
           );
         })}
         {count > 6 && (
-          <span className="absolute -bottom-3 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] text-white/80">
+          <span className="absolute -bottom-3 z-10 rounded-full bg-black/80 px-1.5 py-0.5 text-[9px] font-semibold text-white shadow ring-1 ring-white/20">
             {count}
           </span>
         )}
