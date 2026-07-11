@@ -159,6 +159,8 @@ function MatchPage() {
       onNextRound={() => nextRoundMut.mutate()}
       pending={actionMut.isPending || nextRoundMut.isPending}
       actionError={actionMut.error instanceof Error ? actionMut.error.message : null}
+      onPlayAgain={() => playAgainMut.mutate()}
+      playAgainPending={playAgainMut.isPending}
       onSendChat={sendChat}
       chatPending={chatMut.isPending}
       chatError={chatError}
