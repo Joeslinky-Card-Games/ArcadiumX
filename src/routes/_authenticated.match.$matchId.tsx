@@ -685,7 +685,7 @@ function GameView({
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
           <div className="rounded-xl border border-white/10 bg-black/25 p-2 backdrop-blur sm:p-3">
-            <div className="flex min-h-[6rem] flex-wrap items-end justify-center gap-x-2 gap-y-3 sm:min-h-[7rem] sm:gap-x-6">
+            <div className={`flex min-h-[6rem] flex-nowrap items-end justify-center overflow-x-auto pb-1 ${handGapClass}`}>
               <AnimatePresence initial={false}>
                 {arrangement.melds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
