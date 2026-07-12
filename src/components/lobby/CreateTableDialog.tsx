@@ -23,16 +23,29 @@ export function CreateTableDialog({
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [password, setPassword] = useState("");
+  const [solo, setSolo] = useState(false);
+  const [aiCount, setAiCount] = useState(1);
 
   if (!game) return null;
 
+  const maxAi = Math.max(1, game.maxPlayers - 1);
+  const clampedAi = Math.min(Math.max(1, aiCount), maxAi);
+
   const disabled =
     pending ||
-    maxPlayers < game.minPlayers ||
-    maxPlayers > game.maxPlayers ||
-    (visibility === "private" && password.trim().length < 4);
+    (!solo && (maxPlayers < game.minPlayers || maxPlayers > game.maxPlayers)) ||
+    (!solo && visibility === "private" && password.trim().length < 4);
 
   const submit = () => {
+    if (solo) {
+      onSubmit({
+        gameId: game.id,
+        maxPlayers: clampedAi + 1,
+        visibility: "private",
+        aiCount: clampedAi,
+      });
+      return;
+    }
     onSubmit({
       gameId: game.id,
       maxPlayers,
@@ -50,6 +63,49 @@ export function CreateTableDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/30 p-3">
+            <div>
+              <Label htmlFor="solo-toggle" className="cursor-pointer">Play solo vs AI</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Skip the lobby and start immediately against bots.
+              </p>
+            </div>
+            <button
+              id="solo-toggle"
+              type="button"
+              role="switch"
+              aria-checked={solo}
+              onClick={() => setSolo((v) => !v)}
+              className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
+                solo ? "border-primary bg-primary" : "border-border bg-muted"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-transform ${
+                  solo ? "translate-x-6" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+
+          {solo ? (
+            <div>
+              <Label htmlFor="ai-count">AI opponents</Label>
+              <Input
+                id="ai-count"
+                type="number"
+                min={1}
+                max={maxAi}
+                value={clampedAi}
+                onChange={(e) => setAiCount(Number(e.target.value))}
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Between 1 and {maxAi}. You'll play immediately — no lobby wait.
+              </p>
+            </div>
+          ) : (
+          <>
           <div>
             <Label htmlFor="max-players">Max players</Label>
             <Input
@@ -118,6 +174,8 @@ export function CreateTableDialog({
               </p>
             </div>
           )}
+          </>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
@@ -125,7 +183,7 @@ export function CreateTableDialog({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={submit} disabled={disabled}>
-            {pending ? "Creating…" : "Create table"}
+            {pending ? "Creating…" : solo ? "Start solo game" : "Create table"}
           </Button>
         </DialogFooter>
       </DialogContent>
