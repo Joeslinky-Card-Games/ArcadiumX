@@ -1019,9 +1019,7 @@ function SeatCard({
             className="w-full rounded-full border border-emerald-300/30 bg-emerald-500/20 px-2 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-emerald-100 hover:bg-emerald-500/30"
             aria-expanded={meldsOpen}
           >
-            {laidMelds && laidMelds.length > 0
-              ? `Show hand · ${laidMelds.length} meld${laidMelds.length === 1 ? "" : "s"} · ${meldCount}`
-              : `Show hand · ${hand?.length} card${hand?.length === 1 ? "" : "s"}`}
+            Show hand
           </button>
           {meldsOpen && (
             <LaidMeldsDialog
