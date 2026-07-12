@@ -452,6 +452,15 @@ function GameView({
     return [...kept, ...rest];
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
+  const totalHandCards = arrangement.melds.flat().length + orderedUnmelded.length;
+  const handGapClass =
+    totalHandCards > 18
+      ? "-space-x-4 sm:-space-x-3"
+      : totalHandCards > 14
+        ? "gap-x-0 sm:gap-x-1"
+        : totalHandCards > 10
+          ? "gap-x-1 sm:gap-x-3"
+          : "gap-x-2 sm:gap-x-6";
 
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
@@ -676,7 +685,7 @@ function GameView({
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
           <div className="rounded-xl border border-white/10 bg-black/25 p-2 backdrop-blur sm:p-3">
-            <div className="flex min-h-[6rem] flex-wrap items-end justify-center gap-x-2 gap-y-3 sm:min-h-[7rem] sm:gap-x-6">
+            <div className={`flex min-h-[6rem] flex-nowrap items-end justify-center overflow-x-auto pb-1 ${handGapClass}`}>
               <AnimatePresence initial={false}>
                 {arrangement.melds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
@@ -1477,10 +1486,8 @@ function SortableCard({
     cursor: isDragging ? "grabbing" : "grab",
     touchAction: "none",
   };
-  // Overlap unmelded cards on mobile so more fit on screen; spread out on sm+.
-  const overlap = index && index > 0 ? "-ml-6 sm:ml-0" : "";
   return (
-    <div ref={setNodeRef} style={style} className={overlap} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <PlayingCard id={id} wildRank={wildRank} onClick={onClick} />
     </div>
   );
