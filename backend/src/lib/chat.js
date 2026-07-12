@@ -114,14 +114,12 @@ function censorToken(token) {
 function censorProfanity(text) {
   // Pass 1: per-token censor for normal cases.
   let out = text.replace(/\S+/g, (token) => (tokenHasBadWord(token) ? censorToken(token) : token));
-  // Pass 2: catch spaced-out attempts like "f u c k" or "s h i t" by
-  // normalizing the whole line and, if that contains a bad word, censoring
-  // the letter-run region. Simplest and safest: if the fully-normalized
-  // message is bad but pass 1 didn't already star everything, replace all
-  // remaining alphabetic runs with stars.
-  if (normalizedIsBad(normalize(out))) {
-    out = out.replace(/[A-Za-z]+/g, (w) => censorToken(w));
-  }
+  // Pass 2: catch spaced-out attempts like "f u c k" or "s.h.i.t". Scan
+  // for runs of letters possibly interleaved with non-letter separators
+  // and replace any such run whose normalized form is a bad word.
+  out = out.replace(/[A-Za-z](?:[^A-Za-z]*[A-Za-z])+/g, (run) => {
+    return normalizedIsBad(normalize(run)) ? "*".repeat(run.length) : run;
+  });
   return out;
 }
 
