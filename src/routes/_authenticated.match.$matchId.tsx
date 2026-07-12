@@ -170,10 +170,11 @@ function MatchPage() {
   const tickKey = `${currentMatch?.version ?? 0}:${currentMatch?.hasDrawn ? 1 : 0}`;
   useEffect(() => {
     if (!botIsUp) return;
-    // Slightly longer "think" pause before the discard/lay-down decision,
-    // shorter for the draw. Add a bit of jitter so it doesn't feel mechanical.
-    const base = currentMatch?.hasDrawn ? 850 : 550;
-    const delay = base + Math.floor(Math.random() * 250);
+    // Feels like a human thinking: longer pause before the discard/lay-down
+    // decision, shorter before the draw. Randomised across a 2–6s window.
+    const delay = currentMatch?.hasDrawn
+      ? 3500 + Math.floor(Math.random() * 2500) // 3.5–6s to "think" then play
+      : 2000 + Math.floor(Math.random() * 2000); // 2–4s to pick up
     let cancelled = false;
     const timer = setTimeout(() => {
       if (cancelled) return;
