@@ -48,15 +48,39 @@ exports.handler = withAuth(async (event, { userId, claims }) => {
     ? Math.max(game.minPlayers, Math.min(game.maxPlayers, requestedMax))
     : game.maxPlayers;
 
-  const visibility = body.visibility === "private" ? "private" : "public";
+  // Solo vs AI: fill the remaining seats with bots and hide the table from
+  // the public lobby. AI matches always start with just the host — no
+  // password / join flow.
+  const requestedAI = Number(body.aiCount);
+  const aiCount = Number.isInteger(requestedAI) && requestedAI > 0
+    ? Math.min(requestedAI, game.maxPlayers - 1)
+    : 0;
+
+  const visibility = aiCount > 0
+    ? "private"
+    : (body.visibility === "private" ? "private" : "public");
   let passwordHash;
-  if (visibility === "private") {
+  if (visibility === "private" && aiCount === 0) {
     const err = validatePassword(body.password);
     if (err) return badRequest(err);
     passwordHash = hashPassword(String(body.password).trim());
   }
 
   const matchId = randomUUID();
+
+  const hostName = displayName(userId, claims, body);
+  const hostAvatar = avatarUrl(claims, body);
+  const aiPlayers = [];
+  const aiUsernames = {};
+  for (let i = 1; i <= aiCount; i++) {
+    const id = `ai-${matchId}-${i}`;
+    aiPlayers.push(id);
+    aiUsernames[id] = `Bot ${i}`;
+  }
+  const players = [userId, ...aiPlayers];
+  // For AI tables, lock the seat count to exactly host + bots.
+  const effectiveMax = aiCount > 0 ? players.length : maxPlayers;
+  const effectiveMin = aiCount > 0 ? players.length : game.minPlayers;
 
   // Reserve a unique short code by conditional put on the codes table.
   // On the (rare) collision we retry with a fresh code.
@@ -90,11 +114,12 @@ exports.handler = withAuth(async (event, { userId, claims }) => {
     status: "open",
     createdAt: new Date().toISOString(),
     createdBy: userId,
-    players: [userId],
-    usernames: { [userId]: displayName(userId, claims, body) },
-    avatars: avatarUrl(claims, body) ? { [userId]: avatarUrl(claims, body) } : {},
-    maxPlayers,
-    minPlayers: game.minPlayers,
+    players,
+    usernames: { [userId]: hostName, ...aiUsernames },
+    avatars: hostAvatar ? { [userId]: hostAvatar } : {},
+    maxPlayers: effectiveMax,
+    minPlayers: effectiveMin,
+    ...(aiCount > 0 ? { aiPlayers } : {}),
     version: 0,
     visibility,
     ...(passwordHash ? { passwordHash } : {}),

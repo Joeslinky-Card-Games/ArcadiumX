@@ -144,6 +144,7 @@ export type CreateMatchPayload = {
   password?: string;
   displayName?: string;
   avatarUrl?: string;
+  aiCount?: number;
 };
 
 export type JoinMatchPayload = {
