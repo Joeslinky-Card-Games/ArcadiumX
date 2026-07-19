@@ -94,12 +94,14 @@ async function raiseStatsToFloor(userId, gameId, totals, username) {
   const currentRoundsWon = Number(current.roundsWon || 0);
   const currentGamesPlayed = Number(current.gamesPlayed || 0);
   const currentGamesWon = Number(current.gamesWon || 0);
+  const currentTotalPoints = Number(current.totalPoints || 0);
   const currentRating = Number(current.rating || current.roundsWon || 0);
 
   const roundsPlayedDelta = Math.max(0, Number(totals.roundsPlayed || 0) - currentRoundsPlayed);
   const roundsWonDelta = Math.max(0, Number(totals.roundsWon || 0) - currentRoundsWon);
   const gamesPlayedDelta = Math.max(0, Number(totals.gamesPlayed || 0) - currentGamesPlayed);
   const gamesWonDelta = Math.max(0, Number(totals.gamesWon || 0) - currentGamesWon);
+  const totalPointsDelta = Math.max(0, Number(totals.totalPoints || 0) - currentTotalPoints);
   const ratingDelta = Math.max(0, Number(totals.roundsWon || 0) - currentRating);
 
   await ddb.send(
@@ -107,13 +109,14 @@ async function raiseStatsToFloor(userId, gameId, totals, username) {
       TableName: tables.stats,
       Key: { userId, gameId },
       UpdateExpression:
-        "SET roundsPlayed = if_not_exists(roundsPlayed, :zero) + :roundsPlayedDelta, roundsWon = if_not_exists(roundsWon, :zero) + :roundsWonDelta, gamesPlayed = if_not_exists(gamesPlayed, :zero) + :gamesPlayedDelta, gamesWon = if_not_exists(gamesWon, :zero) + :gamesWonDelta, rating = if_not_exists(rating, :zero) + :ratingDelta, username = :name, updatedAt = :now",
+        "SET roundsPlayed = if_not_exists(roundsPlayed, :zero) + :roundsPlayedDelta, roundsWon = if_not_exists(roundsWon, :zero) + :roundsWonDelta, gamesPlayed = if_not_exists(gamesPlayed, :zero) + :gamesPlayedDelta, gamesWon = if_not_exists(gamesWon, :zero) + :gamesWonDelta, totalPoints = if_not_exists(totalPoints, :zero) + :totalPointsDelta, rating = if_not_exists(rating, :zero) + :ratingDelta, username = :name, updatedAt = :now",
       ExpressionAttributeValues: {
         ":zero": 0,
         ":roundsPlayedDelta": roundsPlayedDelta,
         ":roundsWonDelta": roundsWonDelta,
         ":gamesPlayedDelta": gamesPlayedDelta,
         ":gamesWonDelta": gamesWonDelta,
+        ":totalPointsDelta": totalPointsDelta,
         ":ratingDelta": ratingDelta,
         ":name": username || String(userId).slice(-12),
         ":now": new Date().toISOString(),
@@ -128,6 +131,7 @@ async function raiseStatsToFloor(userId, gameId, totals, username) {
     roundsWonDelta,
     gamesPlayedDelta,
     gamesWonDelta,
+    totalPointsDelta,
   };
 }
 
@@ -138,19 +142,22 @@ async function recordMatchCompletion(match) {
   const winner = match.winner;
   const usernames = match.usernames || {};
   const humans = (match.players || []).filter(isHuman);
+  const scores = match.scores || {};
   await Promise.all(
     humans.map((userId) => {
       const won = userId === winner ? 1 : 0;
+      const points = Number(scores[userId] || 0);
       return ddb.send(
         new UpdateCommand({
           TableName: tables.stats,
           Key: { userId, gameId },
           UpdateExpression:
-            "SET gamesPlayed = if_not_exists(gamesPlayed, :zero) + :one, gamesWon = if_not_exists(gamesWon, :zero) + :won, rating = if_not_exists(rating, :zero), username = :name, updatedAt = :now",
+            "SET gamesPlayed = if_not_exists(gamesPlayed, :zero) + :one, gamesWon = if_not_exists(gamesWon, :zero) + :won, totalPoints = if_not_exists(totalPoints, :zero) + :points, rating = if_not_exists(rating, :zero), username = :name, updatedAt = :now",
           ExpressionAttributeValues: {
             ":zero": 0,
             ":one": 1,
             ":won": won,
+            ":points": points,
             ":name": usernameFor(userId, usernames),
             ":now": new Date().toISOString(),
           },
