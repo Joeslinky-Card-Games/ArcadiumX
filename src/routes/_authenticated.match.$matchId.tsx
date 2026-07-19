@@ -515,12 +515,12 @@ function GameView({
   const totalHandCards = arrangement.melds.flat().length + orderedUnmelded.length;
   const handGapClass =
     totalHandCards > 18
-      ? "-space-x-4 sm:-space-x-3"
+      ? "-space-x-6 sm:-space-x-4"
       : totalHandCards > 14
-        ? "gap-x-0 sm:gap-x-1"
+        ? "-space-x-2 sm:gap-x-0"
         : totalHandCards > 10
-          ? "gap-x-1 sm:gap-x-3"
-          : "gap-x-2 sm:gap-x-6";
+          ? "gap-x-0 sm:gap-x-2"
+          : "gap-x-1 sm:gap-x-4";
 
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
