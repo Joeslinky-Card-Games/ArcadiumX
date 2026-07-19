@@ -1,8 +1,28 @@
-const { ScanCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { GetCommand, ScanCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { ddb, tables } = require("../../lib/dynamo");
 const { ok, serverError } = require("../../lib/response");
 const { withAuth } = require("../../lib/auth");
-const { recordRoundCompletion, recordMatchCompletion } = require("../../lib/stats");
+const { gameIdForStats, recordRoundCompletion, recordMatchCompletion } = require("../../lib/stats");
+
+function isHuman(playerId) {
+  return typeof playerId === "string" && !playerId.startsWith("ai-");
+}
+
+async function hasAnyStatsForMatch(match) {
+  const canonicalGameId = gameIdForStats(match);
+  const rawGameId = typeof match?.gameId === "string" && match.gameId ? match.gameId : canonicalGameId;
+  const gameIds = Array.from(new Set([canonicalGameId, rawGameId]));
+  const humans = (match.players || []).filter(isHuman);
+  for (const userId of humans) {
+    for (const gameId of gameIds) {
+      const res = await ddb.send(
+        new GetCommand({ TableName: tables.stats, Key: { userId, gameId } })
+      );
+      if (res.Item) return true;
+    }
+  }
+  return false;
+}
 
 // One-shot backfill for historical matches whose stats were never recorded.
 // Idempotent: skips matches already flagged. Any authenticated user may call
@@ -22,11 +42,16 @@ exports.handler = withAuth(async () => {
         scanned++;
         const round = Number(match.round || 0);
         const recordedThrough = Number(match.roundsRecordedThrough || 0);
+        const roundIsOver = match.status === "round-complete" || match.status === "complete";
+        const matchIsOver = match.status === "complete";
+        const missingStatsRepair =
+          roundIsOver && round > 0 && (match.roundsRecordedThrough || match.statsRecorded) &&
+          !(await hasAnyStatsForMatch(match));
         const isRoundDone =
-          (match.status === "round-complete" || match.status === "complete") &&
+          roundIsOver &&
           round > 0 &&
-          recordedThrough < round;
-        const isMatchDone = match.status === "complete" && !match.statsRecorded;
+          (recordedThrough < round || missingStatsRepair);
+        const isMatchDone = matchIsOver && (!match.statsRecorded || missingStatsRepair);
         if (!isRoundDone && !isMatchDone) continue;
 
         if (isRoundDone) {
