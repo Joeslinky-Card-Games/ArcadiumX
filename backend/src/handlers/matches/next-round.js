@@ -27,6 +27,9 @@ exports.handler = withAuth(async (event, { userId }) => {
     if (next.status === "complete" && !next.completedAt) {
       next.completedAt = new Date().toISOString();
     }
+    const shouldRecordRuntime =
+      next.status === "complete" && !match.runtimeRecorded;
+    if (shouldRecordRuntime) next.runtimeRecorded = true;
 
     try {
       await ddb.send(
@@ -43,10 +46,8 @@ exports.handler = withAuth(async (event, { userId }) => {
       }
       throw err;
     }
-    if (shouldRecordStats) {
-      await recordMatchCompletion(next);
-      await recordCompletedMatch(next);
-    }
+    if (shouldRecordStats) await recordMatchCompletion(next);
+    if (shouldRecordRuntime) await recordCompletedMatch(next);
     return ok(engines.redactForUser(next, userId));
   } catch (err) {
     console.error(err);
