@@ -515,12 +515,12 @@ function GameView({
   const totalHandCards = arrangement.melds.flat().length + orderedUnmelded.length;
   const handGapClass =
     totalHandCards > 18
-      ? "-space-x-4 sm:-space-x-3"
+      ? "-space-x-6 sm:-space-x-4"
       : totalHandCards > 14
-        ? "gap-x-0 sm:gap-x-1"
+        ? "-space-x-2 sm:gap-x-0"
         : totalHandCards > 10
-          ? "gap-x-1 sm:gap-x-3"
-          : "gap-x-2 sm:gap-x-6";
+          ? "gap-x-0 sm:gap-x-2"
+          : "gap-x-1 sm:gap-x-4";
 
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
@@ -744,8 +744,8 @@ function GameView({
 
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
-          <div className="rounded-xl border border-white/10 bg-black/25 p-2 backdrop-blur sm:p-3">
-            <div className={`flex min-h-[6rem] flex-nowrap items-end justify-center overflow-x-auto pb-1 ${handGapClass}`}>
+          <div className="py-1">
+            <div className={`flex min-h-[6.5rem] flex-nowrap items-end justify-center overflow-x-auto pb-1 sm:min-h-[8.5rem] ${handGapClass}`}>
               <AnimatePresence initial={false}>
                 {arrangement.melds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
@@ -765,12 +765,13 @@ function GameView({
                         key={c}
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                        className={i === 0 ? "" : "-ml-8 sm:-ml-[34px]"}
+                        className={i === 0 ? "" : "-ml-10 sm:-ml-14"}
                         style={{ zIndex: i }}
                       >
                         <PlayingCard
                           id={c}
                           wildRank={wildRank}
+                          size="lg"
                           onClick={() => handleCardClick(c)}
                         />
                       </motion.div>
@@ -790,6 +791,7 @@ function GameView({
                         id={c}
                         wildRank={wildRank}
                         index={i}
+                        size="lg"
                         onClick={() => handleCardClick(c)}
                       />
                     ))}
@@ -1531,11 +1533,13 @@ function SortableCard({
   id,
   wildRank,
   index,
+  size,
   onClick,
 }: {
   id: string;
   wildRank: string | null;
   index?: number;
+  size?: "sm" | "md" | "lg";
   onClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -1549,7 +1553,7 @@ function SortableCard({
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <PlayingCard id={id} wildRank={wildRank} onClick={onClick} />
+      <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} />
     </div>
   );
 }
