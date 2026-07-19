@@ -69,6 +69,7 @@ function startRound(state, round) {
     status: "in-progress",
     winner: null,
     _order: order,
+    turnDrawn: false,
   };
 }
 
@@ -128,8 +129,11 @@ function applyAction(match, userId, action) {
   if (match.status !== "in-progress") throw new Error("Match is not in progress");
   if (currentPlayer(match) !== userId) throw new Error("Not your turn");
   const state = JSON.parse(JSON.stringify(match));
-  // Ensure hand is refilled at the very first action of a turn.
-  drawToFive(state, userId);
+  // Refill hand only at the very first action of a turn (or if empty mid-turn).
+  if (!state.turnDrawn) {
+    drawToFive(state, userId);
+    state.turnDrawn = true;
+  }
 
   if (action.type === "play") {
     const src = { from: action.from, handIndex: action.handIndex, discardPileIndex: action.discardPileIndex };
@@ -185,6 +189,7 @@ function applyAction(match, userId, action) {
     state.discards[userId][pileIdx].push(card);
     // Advance turn — do not pre-draw for next player; they draw on their first action.
     state.turn = (state.turn + 1) % state._order.length;
+    state.turnDrawn = false;
     // Also, top of next player's stock stays face-up in view layer.
     return state;
   }
