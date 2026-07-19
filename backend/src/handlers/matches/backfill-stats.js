@@ -9,13 +9,17 @@ function isHuman(playerId) {
 }
 
 async function hasAnyStatsForMatch(match) {
-  const gameId = gameIdForStats(match);
+  const canonicalGameId = gameIdForStats(match);
+  const rawGameId = typeof match?.gameId === "string" && match.gameId ? match.gameId : canonicalGameId;
+  const gameIds = Array.from(new Set([canonicalGameId, rawGameId]));
   const humans = (match.players || []).filter(isHuman);
   for (const userId of humans) {
-    const res = await ddb.send(
-      new GetCommand({ TableName: tables.stats, Key: { userId, gameId } })
-    );
-    if (res.Item) return true;
+    for (const gameId of gameIds) {
+      const res = await ddb.send(
+        new GetCommand({ TableName: tables.stats, Key: { userId, gameId } })
+      );
+      if (res.Item) return true;
+    }
   }
   return false;
 }
