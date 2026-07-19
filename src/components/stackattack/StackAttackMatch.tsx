@@ -245,7 +245,22 @@ export function StackAttackMatch({ matchId }: { matchId: string }) {
 
       {/* Build piles */}
       <div className="flex-1 flex items-center justify-center py-6">
-        <div className="flex gap-4 sm:gap-6">
+        <div className="flex items-end gap-4 sm:gap-6">
+          {/* Draw pile */}
+          <div className="flex flex-col items-center gap-1">
+            {(match.drawPileCount ?? 0) > 0 ? (
+              <div className="relative">
+                <StackCardBack size="md" />
+                <span className="absolute -bottom-1 -right-1 text-[10px] bg-black/80 border border-white/20 rounded-full px-1.5 py-[1px]">
+                  {match.drawPileCount}
+                </span>
+              </div>
+            ) : (
+              <EmptyStackSlot size="md" label="Draw" />
+            )}
+            <span className="text-[10px] uppercase tracking-wider text-white/60">Draw</span>
+          </div>
+          <div className="w-px self-stretch bg-white/10 mx-1" />
           {buildPiles.map((pile, i) => {
             const top = pile[pile.length - 1];
             const target = pile.length + 1;
