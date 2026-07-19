@@ -17,15 +17,6 @@ export function Leaderboard({ games }: Props) {
     }
   }, [availableGames, gameId]);
 
-  const backfill = useMutation({
-    mutationFn: () =>
-      api<{ scanned: number; roundsBackfilled: number; matchesBackfilled: number }>(
-        "/matches/backfill-stats",
-        { method: "POST" }
-      ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["leaderboard"] }),
-  });
-
   const q = useQuery({
     queryKey: ["leaderboard", gameId],
     queryFn: () => endpoints.leaderboard(gameId),
@@ -60,15 +51,6 @@ export function Leaderboard({ games }: Props) {
           <p className="text-xs text-muted-foreground">Ranked by game wins.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => backfill.mutate()}
-            disabled={backfill.isPending}
-            className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-            title="Record stats from any completed matches still in the database."
-          >
-            {backfill.isPending ? "Backfilling…" : "Backfill past games"}
-          </button>
           {availableGames.length > 1 && (
             <select
               value={gameId}
@@ -82,12 +64,6 @@ export function Leaderboard({ games }: Props) {
           )}
         </div>
       </div>
-      {backfill.data && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Backfilled {backfill.data.roundsBackfilled} round(s) and {backfill.data.matchesBackfilled}{" "}
-          match(es) from {backfill.data.scanned} record(s).
-        </p>
-      )}
 
       <div className="mt-4 overflow-x-auto">
         {q.isLoading ? (
