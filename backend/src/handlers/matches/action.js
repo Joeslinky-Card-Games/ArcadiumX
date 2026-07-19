@@ -40,6 +40,9 @@ exports.handler = withAuth(async (event, { userId }) => {
     if (nextWithTtl.status === "complete" && !nextWithTtl.completedAt) {
       nextWithTtl.completedAt = new Date().toISOString();
     }
+    const shouldRecordRuntime =
+      nextWithTtl.status === "complete" && !match.runtimeRecorded;
+    if (shouldRecordRuntime) nextWithTtl.runtimeRecorded = true;
     try {
       await ddb.send(
         new PutCommand({
@@ -56,10 +59,8 @@ exports.handler = withAuth(async (event, { userId }) => {
       throw err;
     }
     if (roundJustFinalized) await recordRoundCompletion(nextWithTtl);
-    if (shouldRecordStats) {
-      await recordMatchCompletion(nextWithTtl);
-      await recordCompletedMatch(nextWithTtl);
-    }
+    if (shouldRecordStats) await recordMatchCompletion(nextWithTtl);
+    if (shouldRecordRuntime) await recordCompletedMatch(nextWithTtl);
     return ok(engines.redactForUser(nextWithTtl, userId));
   } catch (err) {
     console.error(err);
