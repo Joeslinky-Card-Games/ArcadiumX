@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useUser } from "@clerk/tanstack-react-start";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,15 +61,19 @@ export function StackAttackMatch({ matchId }: { matchId: string }) {
   // Auto-run AI turns.
   const currentTurn = match?._order?.[(match?.turn ?? 0) % (match?._order?.length || 1)];
   const aiSet = new Set(match?.aiPlayers ?? []);
-  const shouldStepAI =
-    match?.status === "in-progress" && currentTurn && aiSet.has(currentTurn);
-  if (shouldStepAI) {
-    setTimeout(() => {
+  const shouldStepAI = Boolean(
+    match?.status === "in-progress" && currentTurn && aiSet.has(currentTurn),
+  );
+  useEffect(() => {
+    if (!shouldStepAI) return;
+    const t = setTimeout(() => {
       api<MatchView>(`/matches/${matchId}/ai-step`, { method: "POST" })
         .then(() => invalidate())
         .catch(() => {});
     }, 550);
-  }
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldStepAI, currentTurn, matchId]);
 
   if (!match) {
     return <div className="p-8 text-white/70">Loading match…</div>;
