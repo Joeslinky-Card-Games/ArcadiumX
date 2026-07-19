@@ -162,9 +162,9 @@ export function GameMenuDialog({
                       onClick={() => setCreateOpen(true)}
                       disabled={!API_URL}
                     >
-                      <div className="flex flex-col items-start">
+                      <div className="flex flex-col items-center text-center">
                         <span className="text-base font-semibold">Create table</span>
-                        <span className="text-xs opacity-80">Solo vs AI or public/private</span>
+                        <span className="text-xs opacity-80">Start a new game</span>
                       </div>
                     </Button>
                     <Button
@@ -176,9 +176,9 @@ export function GameMenuDialog({
                       }}
                       disabled={!API_URL}
                     >
-                      <div className="flex flex-col items-start">
+                      <div className="flex flex-col items-center text-center">
                         <span className="text-base font-semibold">Join table</span>
-                        <span className="text-xs opacity-80">Public list or 6-letter code</span>
+                        <span className="text-xs opacity-80">Find a game to join</span>
                       </div>
                     </Button>
                   </div>
