@@ -21,6 +21,7 @@ import {
 import { estimateRuntime, formatDuration } from "@/lib/format";
 import { useClerkIdentity } from "@/lib/identity";
 import { CreateTableDialog } from "@/components/lobby/CreateTableDialog";
+import { MyTableRow } from "@/components/lobby/MyTableRow";
 import { Leaderboard } from "@/components/lobby/Leaderboard";
 import { RulesContent } from "@/components/game/RulesDialog";
 
