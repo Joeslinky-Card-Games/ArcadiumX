@@ -5,6 +5,7 @@ const { withAuth } = require("../../lib/auth");
 const engines = require("../../lib/engines");
 const { withRefreshedTtl } = require("../../lib/matches");
 const { recordMatchCompletion } = require("../../lib/stats");
+const { recordCompletedMatch } = require("../../lib/runtime-stats");
 
 exports.handler = withAuth(async (event, { userId }) => {
   const matchId = event.pathParameters?.matchId;
@@ -23,6 +24,9 @@ exports.handler = withAuth(async (event, { userId }) => {
     next = withRefreshedTtl(next);
     const shouldRecordStats = next.status === "complete" && !match.statsRecorded;
     if (shouldRecordStats) next.statsRecorded = true;
+    if (next.status === "complete" && !next.completedAt) {
+      next.completedAt = new Date().toISOString();
+    }
 
     try {
       await ddb.send(
@@ -39,7 +43,10 @@ exports.handler = withAuth(async (event, { userId }) => {
       }
       throw err;
     }
-    if (shouldRecordStats) await recordMatchCompletion(next);
+    if (shouldRecordStats) {
+      await recordMatchCompletion(next);
+      await recordCompletedMatch(next);
+    }
     return ok(engines.redactForUser(next, userId));
   } catch (err) {
     console.error(err);
