@@ -76,13 +76,13 @@ export function CreateTableDialog({
               role="switch"
               aria-checked={solo}
               onClick={() => setSolo((v) => !v)}
-              className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
+              className={`relative flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${
                 solo ? "border-primary bg-primary" : "border-border bg-muted"
               }`}
             >
               <span
-                className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-transform ${
-                  solo ? "translate-x-6" : "translate-x-0.5"
+                className={`h-4 w-4 rounded-full bg-background shadow transition-transform ${
+                  solo ? "translate-x-6" : "translate-x-1"
                 }`}
               />
             </button>
