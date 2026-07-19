@@ -76,8 +76,22 @@ export function Leaderboard({ games, gameId: fixedGameId }: Props) {
               ))}
             </select>
           )}
+          <button
+            type="button"
+            onClick={() => backfill.mutate()}
+            disabled={backfill.isPending}
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            title="Recompute stats from historical matches"
+          >
+            {backfill.isPending ? "Rebuilding…" : "Rebuild stats"}
+          </button>
         </div>
       </div>
+      {backfill.data && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Scanned {backfill.data.scanned}, repaired {backfill.data.statRowsRepaired} row(s).
+        </p>
+      )}
 
       <div className="mt-4 overflow-x-auto">
         {q.isLoading ? (
