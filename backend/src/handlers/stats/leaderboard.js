@@ -28,6 +28,7 @@ function mergeRows(rows, gameId) {
       gamesWon: 0,
       roundsPlayed: 0,
       roundsWon: 0,
+      totalPoints: 0,
       updatedAt: row.updatedAt,
     };
     existing.username = row.username || existing.username;
@@ -38,6 +39,7 @@ function mergeRows(rows, gameId) {
     existing.gamesWon += n(row.gamesWon);
     existing.roundsPlayed += n(row.roundsPlayed);
     existing.roundsWon += n(row.roundsWon);
+    existing.totalPoints += n(row.totalPoints);
     if (!existing.updatedAt || (row.updatedAt && row.updatedAt > existing.updatedAt)) {
       existing.updatedAt = row.updatedAt;
     }
