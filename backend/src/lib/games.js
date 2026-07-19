@@ -1,6 +1,7 @@
 // Canonical game catalog. Later this could live in DynamoDB.
 const GAMES = [
   { id: "charlottes-web", name: "Charlotte's Web", description: "13-round rummy variant with escalating hand sizes and shifting wild ranks. Lowest score wins.", minPlayers: 2, maxPlayers: 6, status: "available" },
+  { id: "stack-attack", name: "Stack Attack", description: "Skip-Bo–style stack racing. Empty your stockpile first by playing cards in 1→12 sequences.", minPlayers: 2, maxPlayers: 6, status: "available" },
   { id: "hearts", name: "Hearts", description: "Classic trick-taking game. Avoid the queen of spades.", minPlayers: 4, maxPlayers: 4, status: "coming-soon" },
   { id: "spades", name: "Spades", description: "Partnership bidding game with spades as trump.", minPlayers: 4, maxPlayers: 4, status: "coming-soon" },
   { id: "poker", name: "Texas Hold'em", description: "The world's most popular poker variant.", minPlayers: 2, maxPlayers: 9, status: "coming-soon" },
