@@ -740,7 +740,7 @@ function GameView({
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-3 py-3 sm:px-4 sm:py-4">
+      <div className="relative z-10 mx-auto flex h-[calc(100dvh-4rem-1px)] max-w-6xl flex-col px-3 py-3 sm:px-4 sm:py-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
           <Link to="/lobby" className="text-white/70 underline hover:text-white">← Lobby</Link>
           <div className="flex flex-wrap items-center gap-2">
@@ -766,6 +766,7 @@ function GameView({
         </div>
 
         {/* Table area with seats */}
+        <div className="flex min-h-0 flex-1 items-center justify-center">
         <TableArea
           opponents={opponents}
           match={match}
@@ -783,6 +784,7 @@ function GameView({
           wildRank={wildRank}
           onAction={onAction}
         />
+        </div>
 
         <div className="mt-4 text-center text-sm">
         {matchComplete ? (
@@ -1024,7 +1026,7 @@ function TableArea({
   });
 
   return (
-    <div className="relative mx-auto aspect-[4/3] w-full max-w-4xl sm:aspect-[16/9]">
+    <div className="relative mx-auto aspect-[4/3] h-full max-h-full w-auto max-w-full sm:aspect-[16/9]">
       {/* Oval table */}
       <div
         className="absolute inset-4 rounded-[50%] border-[10px] border-amber-950/80 shadow-[inset_0_0_60px_rgba(0,0,0,0.55),0_20px_50px_rgba(0,0,0,0.5)]"
