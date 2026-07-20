@@ -1,9 +1,8 @@
-const { GetCommand, PutCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
-const { randomUUID } = require("crypto");
+const { GetCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { ddb, tables } = require("../../lib/dynamo");
 const { ok, badRequest, forbidden, notFound, serverError } = require("../../lib/response");
 const { withAuth } = require("../../lib/auth");
-const { withRefreshedTtl, ttlForStatus } = require("../../lib/matches");
+const { withRefreshedTtl } = require("../../lib/matches");
 const engines = require("../../lib/engines");
 
 /**
@@ -34,12 +33,11 @@ exports.handler = withAuth(async (event, { userId }) => {
 
     let next;
     if (allVoted) {
-      // Start a brand-new match with the same seats, code, usernames, avatars.
-      // A fresh matchId is allocated so the completed match row can be deleted
-      // from the database — completed games shouldn't linger.
-      const newMatchId = randomUUID();
+      // Reset in place — reuse the same matchId and code so every client
+      // currently polling this match stays connected. Only game state is
+      // zeroed; seats, code, usernames, avatars, and chat are preserved.
       next = {
-        matchId: newMatchId,
+        matchId: match.matchId,
         code: match.code,
         gameId: match.gameId,
         status: "open",
@@ -52,7 +50,7 @@ exports.handler = withAuth(async (event, { userId }) => {
         minPlayers: match.minPlayers,
         visibility: match.visibility,
         ...(match.passwordHash ? { passwordHash: match.passwordHash } : {}),
-        version: 0,
+        version: expectedVersion + 1,
         scores: Object.fromEntries(match.players.map((p) => [p, 0])),
         round: 0,
         playAgain: [],
@@ -63,43 +61,18 @@ exports.handler = withAuth(async (event, { userId }) => {
     }
 
     const item = withRefreshedTtl(next);
-    if (allVoted) {
-      // Write the fresh match first, then repoint the short-code and delete
-      // the old match row. Order matters so we never orphan the code.
+    try {
       await ddb.send(new PutCommand({
         TableName: tables.matches,
         Item: item,
-        ConditionExpression: "attribute_not_exists(matchId)",
+        ConditionExpression: "version = :v",
+        ExpressionAttributeValues: { ":v": expectedVersion },
       }));
-      if (match.code) {
-        await ddb.send(new PutCommand({
-          TableName: tables.matchCodes,
-          Item: {
-            code: match.code,
-            matchId: item.matchId,
-            createdAt: new Date().toISOString(),
-            ttl: ttlForStatus("open"),
-          },
-        }));
+    } catch (err) {
+      if (err.name === "ConditionalCheckFailedException") {
+        return badRequest("Stale match state, please retry");
       }
-      await ddb.send(new DeleteCommand({
-        TableName: tables.matches,
-        Key: { matchId: match.matchId },
-      }));
-    } else {
-      try {
-        await ddb.send(new PutCommand({
-          TableName: tables.matches,
-          Item: item,
-          ConditionExpression: "version = :v",
-          ExpressionAttributeValues: { ":v": expectedVersion },
-        }));
-      } catch (err) {
-        if (err.name === "ConditionalCheckFailedException") {
-          return badRequest("Stale match state, please retry");
-        }
-        throw err;
-      }
+      throw err;
     }
     return ok(engines.redactForUser(item, userId));
   } catch (err) {
