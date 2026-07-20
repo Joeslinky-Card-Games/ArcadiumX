@@ -892,11 +892,7 @@ function GameView({
                         key={c}
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                        className={`relative ${i === 0 ? "" : "-ml-10 sm:-ml-14"} ${
-                          newCardId === c
-                            ? "drop-shadow-[0_0_10px_rgba(96,165,250,0.95)]"
-                            : "drop-shadow-[0_0_8px_rgba(251,191,36,0.65)]"
-                        }`}
+                        className={`relative ${i === 0 ? "" : "-ml-10 sm:-ml-14"}`}
                         style={{ zIndex: i }}
                       >
                         <PlayingCard
@@ -904,6 +900,7 @@ function GameView({
                           wildRank={wildRank}
                           size="lg"
                           onClick={() => handleCardClick(c)}
+                          tint={newCardId === c ? "new" : "meld"}
                         />
                       </motion.div>
                     ))}
@@ -1700,9 +1697,9 @@ function SortableCard({
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative ${isNew ? "drop-shadow-[0_0_12px_rgba(96,165,250,0.95)]" : ""}`}
+      className="relative"
     >
-      <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} />
+      <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} tint={isNew ? "new" : undefined} />
     </div>
   );
 }
