@@ -557,10 +557,23 @@ function GameView({
     const measure = () => {
       const node = handRowRef.current;
       if (!node) return;
-      // Reset then measure so scrollWidth reflects natural size.
+      // Reset before measuring so we get the natural (un-squeezed) child widths.
       node.style.setProperty("--hand-squeeze", "0px");
-      const overflow = node.scrollWidth - node.clientWidth;
-      const gaps = Math.max(1, node.children.length - 1);
+      const children = Array.from(node.children) as HTMLElement[];
+      if (children.length === 0) {
+        setHandSqueeze(0);
+        return;
+      }
+      // Because the row uses overflow-visible, scrollWidth equals clientWidth
+      // even when children overflow. Sum children widths + gaps instead.
+      const cs = getComputedStyle(node);
+      const gap = parseFloat(cs.columnGap || cs.gap || "0") || 0;
+      let contentWidth = 0;
+      for (const c of children) contentWidth += c.getBoundingClientRect().width;
+      contentWidth += gap * (children.length - 1);
+      const available = node.clientWidth;
+      const overflow = contentWidth - available;
+      const gaps = Math.max(1, children.length - 1);
       if (overflow <= 0) {
         setHandSqueeze(0);
       } else {
@@ -570,7 +583,11 @@ function GameView({
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, [totalHandCards, orderedUnmelded.length, arrangement.melds.length]);
 
   const dragSensors = useSensors(
