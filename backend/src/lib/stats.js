@@ -145,11 +145,13 @@ async function recordMatchCompletion(match) {
   const scores = match.scores || {};
   const now = new Date().toISOString();
   const matchId = match.matchId || null;
-  // gamerscore: reward for finishing below the average opponent score.
-  // Lower raw score is better in every game we currently support, so
-  //   delta = round(avgOthers - myScore)
-  // gives positive points to over-performers and negative to under-performers,
-  // scaled by margin. Winners get the largest positive deltas by construction.
+  // gamerscore: everyone who finishes a match earns a flat participation
+  // base, then a margin bonus/penalty based on how far ahead or behind the
+  // average opponent they were. Lower raw score is better in every game we
+  // currently support, so
+  //   delta = BASE + round(avgOthers - myScore)
+  // Solo matches (no human opponents) just get the flat base.
+  const BASE_GAMERSCORE = 10;
   const humanScores = humans.map((u) => Number(scores[u] || 0));
   const humanTotal = humanScores.reduce((s, v) => s + v, 0);
   await Promise.all(
@@ -158,7 +160,8 @@ async function recordMatchCompletion(match) {
       const points = Number(scores[userId] || 0);
       const others = humans.length > 1 ? humans.length - 1 : 1;
       const avgOthers = humans.length > 1 ? (humanTotal - points) / others : 0;
-      const delta = Math.round(avgOthers - points);
+      const margin = humans.length > 1 ? Math.round(avgOthers - points) : 0;
+      const delta = BASE_GAMERSCORE + margin;
       const historyEntry = { at: now, delta, matchId, players: humans.length };
       return ddb.send(
         new UpdateCommand({
