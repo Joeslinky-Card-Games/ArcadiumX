@@ -269,6 +269,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MatchesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
       Events:
         Api:
           Type: HttpApi
@@ -413,6 +415,24 @@ Resources:
             ApiId: !Ref HttpApi
             Method: PUT
             Path: /profile
+
+  GetUserProfileFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers/profile/user.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref StatsTable
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /profile/user/{userId}
 
   # ---------- Stats ----------
   GetMyStatsFn:
