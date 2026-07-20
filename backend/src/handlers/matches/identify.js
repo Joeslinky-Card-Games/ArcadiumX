@@ -57,6 +57,22 @@ exports.handler = withAuth(async (event, { userId }) => {
       ExpressionAttributeValues: values,
       ReturnValues: "ALL_NEW",
     }));
+    // Mirror the caller's canonical identity onto the users table so
+    // public profile pages have an avatar/username to display.
+    const userSets = ["lastActiveAt = :now"];
+    const userValues = { ":now": new Date().toISOString() };
+    if (name) { userSets.push("username = :name"); userValues[":name"] = name; }
+    if (avatar) { userSets.push("avatarUrl = :avatar"); userValues[":avatar"] = avatar; }
+    ddb
+      .send(
+        new UpdateCommand({
+          TableName: tables.users,
+          Key: { userId },
+          UpdateExpression: "SET " + userSets.join(", "),
+          ExpressionAttributeValues: userValues,
+        })
+      )
+      .catch((err) => console.warn("user mirror update failed", err.message));
     return ok(stripSecret(res.Attributes));
   } catch (err) {
     if (err.name === "ConditionalCheckFailedException") return badRequest("Not a player on this table");

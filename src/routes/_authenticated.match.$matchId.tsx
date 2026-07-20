@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@clerk/tanstack-react-start";
-import { useApi, type GameAction, type MatchView, type ChatMessage } from "@/lib/api";
+import { useApi, endpoints, type Game, type GameAction, type MatchView, type ChatMessage } from "@/lib/api";
 import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
@@ -32,6 +32,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { StackAttackMatch } from "@/components/stackattack/StackAttackMatch";
+import { ProfileDialog } from "@/components/profile/ProfileDialog";
+
+// Simple context so any Avatar/name in the match tree can trigger the
+// profile dialog without threading callbacks through several layers.
+type ProfileTarget = { userId: string; name?: string | null; avatarUrl?: string | null };
+const ProfileContext = createContext<((t: ProfileTarget) => void) | null>(null);
+function useOpenProfile() {
+  return useContext(ProfileContext);
+}
 
 export const Route = createFileRoute("/_authenticated/match/$matchId")({
   head: () => ({
@@ -213,9 +222,10 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
   if (query.error) return <Centered>Failed to load match. <button className="underline" onClick={invalidate}>Retry</button></Centered>;
   const match = query.data!;
 
-  if (match.status === "open") {
-    return (
-      <LobbyView
+  return (
+    <MatchProfileScope>
+      {match.status === "open" ? (
+        <LobbyView
         match={match}
         userId={userId}
         selfImage={selfImage}
@@ -226,11 +236,8 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
         chatPending={chatMut.isPending}
         chatError={chatError}
       />
-    );
-  }
-
-  return (
-    <GameView
+      ) : (
+        <GameView
       match={match}
       userId={userId}
       selfImage={selfImage}
@@ -244,6 +251,33 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
       chatPending={chatMut.isPending}
       chatError={chatError}
     />
+      )}
+    </MatchProfileScope>
+  );
+}
+
+// Wraps children with a ProfileContext and renders the ProfileDialog. Any
+// avatar/name inside the match tree can call useOpenProfile() to bring it up.
+function MatchProfileScope({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<ProfileTarget | null>(null);
+  const gamesQ = useQuery({
+    queryKey: ["games"],
+    queryFn: () => endpoints.listGames(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const games: Game[] = gamesQ.data?.games ?? [];
+  return (
+    <ProfileContext.Provider value={setTarget}>
+      {children}
+      <ProfileDialog
+        open={Boolean(target)}
+        onOpenChange={(v) => { if (!v) setTarget(null); }}
+        userId={target?.userId ?? null}
+        fallbackName={target?.name ?? null}
+        fallbackAvatar={target?.avatarUrl ?? null}
+        games={games}
+      />
+    </ProfileContext.Provider>
   );
 }
 
@@ -513,14 +547,31 @@ function GameView({
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
   const totalHandCards = arrangement.melds.flat().length + orderedUnmelded.length;
-  const handGapClass =
-    totalHandCards > 18
-      ? "-space-x-6 sm:-space-x-4"
-      : totalHandCards > 14
-        ? "-space-x-2 sm:gap-x-0"
-        : totalHandCards > 10
-          ? "gap-x-0 sm:gap-x-2"
-          : "gap-x-1 sm:gap-x-4";
+  // Dynamic squeeze: measure the row and apply negative margin to each
+  // child after the first so cards always fit without horizontal scroll.
+  const handRowRef = useRef<HTMLDivElement>(null);
+  const [handSqueeze, setHandSqueeze] = useState(0);
+  useLayoutEffect(() => {
+    const el = handRowRef.current;
+    if (!el) return;
+    const measure = () => {
+      const node = handRowRef.current;
+      if (!node) return;
+      // Reset then measure so scrollWidth reflects natural size.
+      node.style.setProperty("--hand-squeeze", "0px");
+      const overflow = node.scrollWidth - node.clientWidth;
+      const gaps = Math.max(1, node.children.length - 1);
+      if (overflow <= 0) {
+        setHandSqueeze(0);
+      } else {
+        setHandSqueeze(Math.ceil(overflow / gaps) + 2);
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [totalHandCards, orderedUnmelded.length, arrangement.melds.length]);
 
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
@@ -745,7 +796,11 @@ function GameView({
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
           <div className="py-1">
-            <div className={`flex min-h-[6.5rem] flex-nowrap items-end justify-center overflow-x-auto pb-1 sm:min-h-[8.5rem] ${handGapClass}`}>
+          <div
+            ref={handRowRef}
+            className="flex min-h-[6.5rem] flex-nowrap items-end justify-center overflow-x-hidden pb-1 sm:min-h-[8.5rem] gap-x-1 sm:gap-x-2 [&>*+*]:[margin-left:calc(var(--hand-squeeze,0px)*-1)]"
+            style={{ ["--hand-squeeze" as unknown as string]: `${handSqueeze}px` }}
+          >
               <AnimatePresence initial={false}>
                 {arrangement.melds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
@@ -1017,22 +1072,31 @@ function TableArea({
 function Avatar({ name, userId, imageUrl, size = "md" }: { name: string; userId: string; imageUrl?: string | null; size?: "sm" | "md" }) {
   const hue = avatarHue(userId);
   const dim = size === "sm" ? "h-7 w-7 text-[10px]" : "h-11 w-11 text-sm";
-  if (imageUrl) {
-    return (
-      <img
+  const openProfile = useOpenProfile();
+  const inner = imageUrl ? (
+    <img
         src={imageUrl}
         alt={name}
         className={`${dim} rounded-full object-cover shadow-inner ring-2 ring-black/30`}
       />
-    );
-  }
-  return (
+  ) : (
     <div
       className={`flex ${dim} items-center justify-center rounded-full font-bold text-white shadow-inner ring-2 ring-black/30`}
       style={{ background: `linear-gradient(135deg, hsl(${hue} 65% 45%), hsl(${(hue + 40) % 360} 65% 30%))` }}
     >
       {initialsOf(name)}
     </div>
+  );
+  if (!openProfile || !userId) return inner;
+  return (
+    <button
+      type="button"
+      onClick={() => openProfile({ userId, name, avatarUrl: imageUrl ?? null })}
+      className="rounded-full transition hover:scale-105 hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+      title={`View ${name}'s profile`}
+    >
+      {inner}
+    </button>
   );
 }
 
