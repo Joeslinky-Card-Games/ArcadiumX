@@ -150,3 +150,35 @@ html, body {
     color: var(--color-foreground);
   }
 }
+
+@keyframes suit-float {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--suit-opacity, 0.18);
+  }
+  90% {
+    opacity: var(--suit-opacity, 0.18);
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), -115vh, 0) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+}
+
+.suit-particle {
+  animation-name: suit-float;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 6px color-mix(in oklab, var(--primary) 30%, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .suit-particle {
+    animation: none;
+    display: none;
+  }
+}
