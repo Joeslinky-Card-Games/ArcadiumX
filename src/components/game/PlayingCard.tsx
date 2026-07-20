@@ -28,6 +28,7 @@ export function PlayingCard({
   faded,
   onClick,
   className = "",
+  tint,
 }: {
   id: string;
   wildRank?: string | null;
@@ -36,10 +37,17 @@ export function PlayingCard({
   faded?: boolean;
   onClick?: () => void;
   className?: string;
+  tint?: "meld" | "new" | null;
 }) {
   const c = parseCard(id);
   const wild = isWild(id, wildRank);
-  const base = `relative select-none rounded-lg border border-slate-200 bg-gradient-to-br from-white to-slate-100 flex flex-col items-center justify-center font-semibold shadow-[0_2px_6px_rgba(0,0,0,0.35)] ${sizeClasses[size]}`;
+  const tintBg =
+    tint === "new"
+      ? "border-sky-300 bg-gradient-to-br from-sky-100 to-sky-300 shadow-[0_2px_6px_rgba(0,0,0,0.35),inset_0_0_0_2px_rgba(56,189,248,0.55)]"
+      : tint === "meld"
+        ? "border-amber-300 bg-gradient-to-br from-amber-50 to-amber-200 shadow-[0_2px_6px_rgba(0,0,0,0.35),inset_0_0_0_2px_rgba(251,191,36,0.55)]"
+        : "border-slate-200 bg-gradient-to-br from-white to-slate-100 shadow-[0_2px_6px_rgba(0,0,0,0.35)]";
+  const base = `relative select-none rounded-lg border ${tintBg} flex flex-col items-center justify-center font-semibold ${sizeClasses[size]}`;
   const state = [
     selected ? "ring-2 ring-amber-300 -translate-y-3 shadow-[0_8px_18px_rgba(0,0,0,0.5)]" : "",
     faded ? "opacity-40" : "",
