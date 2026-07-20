@@ -222,9 +222,10 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
   if (query.error) return <Centered>Failed to load match. <button className="underline" onClick={invalidate}>Retry</button></Centered>;
   const match = query.data!;
 
-  if (match.status === "open") {
-    return (
-      <LobbyView
+  return (
+    <MatchProfileScope>
+      {match.status === "open" ? (
+        <LobbyView
         match={match}
         userId={userId}
         selfImage={selfImage}
@@ -235,11 +236,8 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
         chatPending={chatMut.isPending}
         chatError={chatError}
       />
-    );
-  }
-
-  return (
-    <GameView
+      ) : (
+        <GameView
       match={match}
       userId={userId}
       selfImage={selfImage}
@@ -253,6 +251,33 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
       chatPending={chatMut.isPending}
       chatError={chatError}
     />
+      )}
+    </MatchProfileScope>
+  );
+}
+
+// Wraps children with a ProfileContext and renders the ProfileDialog. Any
+// avatar/name inside the match tree can call useOpenProfile() to bring it up.
+function MatchProfileScope({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<ProfileTarget | null>(null);
+  const gamesQ = useQuery({
+    queryKey: ["games"],
+    queryFn: () => endpoints.listGames(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const games: Game[] = gamesQ.data?.games ?? [];
+  return (
+    <ProfileContext.Provider value={setTarget}>
+      {children}
+      <ProfileDialog
+        open={Boolean(target)}
+        onOpenChange={(v) => { if (!v) setTarget(null); }}
+        userId={target?.userId ?? null}
+        fallbackName={target?.name ?? null}
+        fallbackAvatar={target?.avatarUrl ?? null}
+        games={games}
+      />
+    </ProfileContext.Provider>
   );
 }
 
