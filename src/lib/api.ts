@@ -142,7 +142,19 @@ export type StatRow = {
   roundsPlayed?: number;
   roundsWon?: number;
   totalPoints?: number;
+  gamerscore?: number;
+  history?: { at: string; delta: number; matchId?: string | null; players?: number }[];
+  lastMatchAt?: string;
   updatedAt?: string;
+};
+
+export type PublicProfile = {
+  userId: string;
+  username: string | null;
+  avatarUrl: string | null;
+  createdAt: string | null;
+  lastActiveAt: string | null;
+  stats: StatRow[];
 };
 
 export const endpoints = {
@@ -154,6 +166,8 @@ export const endpoints = {
     ),
   runtime: (gameId: string) =>
     apiFetch<RuntimeStats>(`/games/${encodeURIComponent(gameId)}/runtime`),
+  userProfile: (userId: string, token: string | null) =>
+    apiFetch<PublicProfile>(`/profile/user/${encodeURIComponent(userId)}`, { token }),
 };
 
 export type RuntimeStats = {
