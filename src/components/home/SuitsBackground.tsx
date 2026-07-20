@@ -42,8 +42,13 @@ export function SuitsBackground() {
       className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
     >
       {/* Radial glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,theme(colors.primary/12%),transparent_60%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,theme(colors.primary/8%),transparent_55%)]" />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at top, color-mix(in oklab, var(--primary) 18%, transparent), transparent 60%), radial-gradient(ellipse at bottom, color-mix(in oklab, var(--primary) 10%, transparent), transparent 55%)",
+        }}
+      />
 
       {particles.map((p, i) => {
         const isRed = p.suit === "♥" || p.suit === "♦";
