@@ -1,5 +1,5 @@
 // Client mirror of backend/src/lib/game/melds.js — validation + auto-arrange solver.
-import { parseCard, RANK_ORDER, cardPoints, type ParsedCard } from "./cards";
+import { parseCard, RANK_ORDER, cardPoints, type ParsedCard, type Rank } from "./cards";
 
 function forEachClassification(
   cards: string[],
