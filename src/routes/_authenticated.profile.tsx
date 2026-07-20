@@ -105,7 +105,7 @@ function ProfilePage() {
   ];
 
   return (
-    <main className="mx-auto min-h-[calc(100dvh-4rem)] max-w-2xl overflow-x-hidden px-6 py-12 pb-24">
+    <main className="mx-auto h-[calc(100dvh-4rem)] max-w-2xl overflow-x-hidden overflow-y-auto px-6 py-12 pb-24 [-webkit-overflow-scrolling:touch]">
       <h1 className="text-3xl font-bold tracking-tight text-foreground">Profile</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Account managed by Clerk. Game stats will appear here once the backend is wired.
