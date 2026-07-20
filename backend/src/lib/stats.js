@@ -143,23 +143,39 @@ async function recordMatchCompletion(match) {
   const usernames = match.usernames || {};
   const humans = (match.players || []).filter(isHuman);
   const scores = match.scores || {};
+  const now = new Date().toISOString();
+  const matchId = match.matchId || null;
+  // gamerscore: reward for finishing below the average opponent score.
+  // Lower raw score is better in every game we currently support, so
+  //   delta = round(avgOthers - myScore)
+  // gives positive points to over-performers and negative to under-performers,
+  // scaled by margin. Winners get the largest positive deltas by construction.
+  const humanScores = humans.map((u) => Number(scores[u] || 0));
+  const humanTotal = humanScores.reduce((s, v) => s + v, 0);
   await Promise.all(
     humans.map((userId) => {
       const won = userId === winner ? 1 : 0;
       const points = Number(scores[userId] || 0);
+      const others = humans.length > 1 ? humans.length - 1 : 1;
+      const avgOthers = humans.length > 1 ? (humanTotal - points) / others : 0;
+      const delta = Math.round(avgOthers - points);
+      const historyEntry = { at: now, delta, matchId, players: humans.length };
       return ddb.send(
         new UpdateCommand({
           TableName: tables.stats,
           Key: { userId, gameId },
           UpdateExpression:
-            "SET gamesPlayed = if_not_exists(gamesPlayed, :zero) + :one, gamesWon = if_not_exists(gamesWon, :zero) + :won, totalPoints = if_not_exists(totalPoints, :zero) + :points, rating = if_not_exists(rating, :zero), username = :name, updatedAt = :now",
+            "SET gamesPlayed = if_not_exists(gamesPlayed, :zero) + :one, gamesWon = if_not_exists(gamesWon, :zero) + :won, totalPoints = if_not_exists(totalPoints, :zero) + :points, rating = if_not_exists(rating, :zero), gamerscore = if_not_exists(gamerscore, :zero) + :delta, history = list_append(if_not_exists(history, :empty), :entry), username = :name, updatedAt = :now, lastMatchAt = :now",
           ExpressionAttributeValues: {
             ":zero": 0,
             ":one": 1,
             ":won": won,
             ":points": points,
+            ":delta": delta,
+            ":empty": [],
+            ":entry": [historyEntry],
             ":name": usernameFor(userId, usernames),
-            ":now": new Date().toISOString(),
+            ":now": now,
           },
         })
       );
