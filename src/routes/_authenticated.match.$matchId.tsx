@@ -1697,9 +1697,9 @@ function SortableCard({
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative ${isNew ? "drop-shadow-[0_0_12px_rgba(96,165,250,0.95)]" : ""}`}
+      className="relative"
     >
-      <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} />
+      <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} tint={isNew ? "new" : undefined} />
     </div>
   );
 }
