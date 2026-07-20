@@ -1834,12 +1834,12 @@ function GoOutOptionsPicker({
                         key={mi}
                         className="flex items-end rounded-lg bg-emerald-900/60 px-1.5 py-1 ring-1 ring-emerald-400/40"
                       >
-                        {meld.map((c, i) => (
+                          {meld.map((c, i) => (
                           <div
                             key={c}
                             style={{ marginLeft: i === 0 ? 0 : -28, zIndex: i }}
                           >
-                            <PlayingCard id={c} wildRank={wildRank} size="sm" />
+                            <PlayingCard id={c} wildRank={wildRank} size="sm" meldContext={meld} />
                           </div>
                         ))}
                       </div>
