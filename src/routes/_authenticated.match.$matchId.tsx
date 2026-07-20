@@ -812,7 +812,7 @@ function GameView({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 240, damping: 22 }}
-                    className="relative flex items-end rounded-lg bg-emerald-900/50 px-1.5 py-1 ring-1 ring-amber-300/40 sm:px-2"
+                    className="relative flex items-end"
                     title={`Meld #${mi + 1}`}
                   >
                     {meld.map((c, i) => (
