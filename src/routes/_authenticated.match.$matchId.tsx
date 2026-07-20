@@ -1619,7 +1619,7 @@ function SortableCard({
     touchAction: "none",
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="hover:!z-50">
       <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} />
     </div>
   );
