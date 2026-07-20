@@ -823,7 +823,7 @@ function GameView({
                         key={c}
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                        className={i === 0 ? "" : "-ml-10 sm:-ml-14"}
+                        className={`hover:!z-50 ${i === 0 ? "" : "-ml-10 sm:-ml-14"}`}
                         style={{ zIndex: i }}
                       >
                         <PlayingCard
