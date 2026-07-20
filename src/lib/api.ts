@@ -166,8 +166,6 @@ export const endpoints = {
     ),
   runtime: (gameId: string) =>
     apiFetch<RuntimeStats>(`/games/${encodeURIComponent(gameId)}/runtime`),
-  userProfile: (userId: string, token: string | null) =>
-    apiFetch<PublicProfile>(`/profile/user/${encodeURIComponent(userId)}`, { token }),
 };
 
 export type RuntimeStats = {
