@@ -1350,7 +1350,7 @@ function LaidMeldsDialog({
               <div key={i} className="rounded-lg bg-emerald-900/50 px-2 py-1 ring-1 ring-amber-300/40">
                 <div className="flex -space-x-6 sm:-space-x-8">
                   {orderMeldForDisplay(meld, wildRank).map((c) => (
-                    <PlayingCard key={c} id={c} wildRank={wildRank} />
+                    <PlayingCard key={c} id={c} wildRank={wildRank} meldContext={meld} />
                   ))}
                 </div>
               </div>
