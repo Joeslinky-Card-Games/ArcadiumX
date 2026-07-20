@@ -23,7 +23,11 @@ async function recomputeGamerscore(completedMatches) {
     const scores = match.scores || {};
     const usernames = match.usernames || {};
     const humanTotal = humans.reduce((s, u) => s + Number(scores[u] || 0), 0);
-    const at = match.completedAt || match.updatedAt || new Date().toISOString();
+      const at =
+        match.completedAt ||
+        match.createdAt ||
+        match.updatedAt ||
+        new Date().toISOString();
     for (const userId of humans) {
       const points = Number(scores[userId] || 0);
       const others = humans.length > 1 ? humans.length - 1 : 1;
