@@ -77,23 +77,27 @@ export function PlayingCard({
   const color = wild ? "!text-amber-500" : red ? "!text-rose-600" : "!text-slate-900";
   return (
     <button type="button" onClick={onClick} className={`${base} ${state} ${color} ${className}`}>
-      <div className={`absolute left-1.5 top-1 flex flex-col items-center leading-none ${cornerSize[size]}`}>
-        <span className="font-bold">{rankLabel(c.rank)}</span>
-        <span>{suitSymbol(c.suit)}</span>
+      <div className={`absolute left-1.5 top-1 leading-none ${cornerSize[size]}`}>
+        <div className="flex items-start gap-0.5">
+          <div className="flex flex-col items-center">
+            <span className="font-bold">{rankLabel(c.rank)}</span>
+            <span>{suitSymbol(c.suit)}</span>
+          </div>
+          {usedAsNatural && (
+            <span
+              className="mt-0.5 rounded bg-amber-400 px-0.5 text-[7px] font-bold uppercase leading-none text-slate-900 ring-1 ring-amber-600 shadow"
+              title="Wild card played as natural"
+            >
+              N
+            </span>
+          )}
+        </div>
       </div>
       <div className={`absolute right-1.5 bottom-1 flex flex-col items-center leading-none rotate-180 ${cornerSize[size]}`}>
         <span className="font-bold">{rankLabel(c.rank)}</span>
         <span>{suitSymbol(c.suit)}</span>
       </div>
       <div className={`${pipSize[size]} leading-none`}>{suitSymbol(c.suit)}</div>
-      {usedAsNatural && (
-        <span
-          className="absolute -top-1 -right-1 rounded-full bg-amber-400 px-1 py-px text-[8px] font-bold uppercase leading-none tracking-wider text-slate-900 ring-1 ring-amber-600 shadow"
-          title="Wild card played as natural"
-        >
-          N
-        </span>
-      )}
     </button>
   );
 }
