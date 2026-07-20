@@ -547,14 +547,31 @@ function GameView({
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
   const totalHandCards = arrangement.melds.flat().length + orderedUnmelded.length;
-  const handGapClass =
-    totalHandCards > 18
-      ? "-space-x-6 sm:-space-x-4"
-      : totalHandCards > 14
-        ? "-space-x-2 sm:gap-x-0"
-        : totalHandCards > 10
-          ? "gap-x-0 sm:gap-x-2"
-          : "gap-x-1 sm:gap-x-4";
+  // Dynamic squeeze: measure the row and apply negative margin to each
+  // child after the first so cards always fit without horizontal scroll.
+  const handRowRef = useRef<HTMLDivElement>(null);
+  const [handSqueeze, setHandSqueeze] = useState(0);
+  useLayoutEffect(() => {
+    const el = handRowRef.current;
+    if (!el) return;
+    const measure = () => {
+      const node = handRowRef.current;
+      if (!node) return;
+      // Reset then measure so scrollWidth reflects natural size.
+      node.style.setProperty("--hand-squeeze", "0px");
+      const overflow = node.scrollWidth - node.clientWidth;
+      const gaps = Math.max(1, node.children.length - 1);
+      if (overflow <= 0) {
+        setHandSqueeze(0);
+      } else {
+        setHandSqueeze(Math.ceil(overflow / gaps) + 2);
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [totalHandCards, orderedUnmelded.length, arrangement.melds.length]);
 
   const dragSensors = useSensors(
     // Small activation distance so single-tap still fires the discard click.
@@ -779,7 +796,11 @@ function GameView({
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
           <div className="py-1">
-            <div className={`flex min-h-[6.5rem] flex-nowrap items-end justify-center overflow-x-auto pb-1 sm:min-h-[8.5rem] ${handGapClass}`}>
+          <div
+            ref={handRowRef}
+            className="flex min-h-[6.5rem] flex-nowrap items-end justify-center overflow-x-hidden pb-1 sm:min-h-[8.5rem] gap-x-1 sm:gap-x-2 [&>*+*]:[margin-left:calc(var(--hand-squeeze,0px)*-1)]"
+            style={{ ["--hand-squeeze" as unknown as string]: `${handSqueeze}px` }}
+          >
               <AnimatePresence initial={false}>
                 {arrangement.melds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
