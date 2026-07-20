@@ -798,7 +798,7 @@ function GameView({
 
         <LayoutGroup>
           {/* Single hand row: melds (condensed/overlapping) + unmelded cards */}
-          <div className="py-1">
+          <div className="pt-4 pb-1">
           <div
             ref={handRowRef}
             className="flex min-h-[6.5rem] flex-nowrap items-end justify-center overflow-x-hidden pb-1 sm:min-h-[8.5rem] gap-x-1 sm:gap-x-2 [&>*+*]:[margin-left:calc(var(--hand-squeeze,0px)*-1)]"
@@ -815,7 +815,7 @@ function GameView({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ type: "spring", stiffness: 240, damping: 22 }}
-                    className="relative flex items-end"
+                    className="group relative flex items-end hover:!z-50"
                     title={`Meld #${mi + 1}`}
                   >
                     {meld.map((c, i) => (
@@ -823,7 +823,7 @@ function GameView({
                         key={c}
                         layoutId={`card-${c}`}
                         transition={{ type: "spring", stiffness: 260, damping: 24 }}
-                        className={i === 0 ? "" : "-ml-10 sm:-ml-14"}
+                        className={`hover:!z-50 ${i === 0 ? "" : "-ml-10 sm:-ml-14"}`}
                         style={{ zIndex: i }}
                       >
                         <PlayingCard
@@ -1619,7 +1619,7 @@ function SortableCard({
     touchAction: "none",
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="hover:!z-50">
       <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} />
     </div>
   );
