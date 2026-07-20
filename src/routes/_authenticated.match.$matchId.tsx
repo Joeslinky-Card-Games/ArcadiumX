@@ -1676,12 +1676,14 @@ function SortableCard({
   index,
   size,
   onClick,
+  isNew,
 }: {
   id: string;
   wildRank: string | null;
   index?: number;
   size?: "sm" | "md" | "lg";
   onClick: () => void;
+  isNew?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style: React.CSSProperties = {
@@ -1693,7 +1695,13 @@ function SortableCard({
     touchAction: "none",
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="relative">
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`relative ${isNew ? "drop-shadow-[0_0_12px_rgba(96,165,250,0.95)]" : ""}`}
+    >
       <PlayingCard id={id} wildRank={wildRank} size={size} onClick={onClick} />
     </div>
   );
