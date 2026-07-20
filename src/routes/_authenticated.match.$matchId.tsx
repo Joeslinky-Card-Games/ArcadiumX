@@ -740,7 +740,7 @@ function GameView({
         }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem-1px)] max-w-6xl flex-col px-3 py-3 sm:px-4 sm:py-4">
+      <div className="relative z-10 mx-auto flex h-[calc(100dvh-4rem-1px)] max-w-6xl flex-col px-3 py-3 sm:px-4 sm:py-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
           <Link to="/lobby" className="text-white/70 underline hover:text-white">← Lobby</Link>
           <div className="flex flex-wrap items-center gap-2">
