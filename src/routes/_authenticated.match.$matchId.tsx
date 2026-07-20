@@ -571,7 +571,12 @@ function GameView({
       let contentWidth = 0;
       for (const c of children) contentWidth += c.getBoundingClientRect().width;
       contentWidth += gap * (children.length - 1);
-      const available = node.clientWidth;
+      // node.clientWidth can grow with its content because all ancestors up to
+      // the page wrapper use overflow-visible (needed for the hover lift).
+      // Use the viewport width minus the section's horizontal padding as the
+      // real hard cap so cards never spill past the screen edge.
+      const viewport = document.documentElement.clientWidth || window.innerWidth;
+      const available = Math.min(node.clientWidth, viewport - 32);
       const overflow = contentWidth - available;
       const gaps = Math.max(1, children.length - 1);
       if (overflow <= 0) {
