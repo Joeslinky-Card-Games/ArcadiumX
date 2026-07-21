@@ -10,6 +10,7 @@ import { JoinDialog } from "@/components/lobby/JoinDialog";
 import { GameMenuDialog } from "@/components/lobby/GameMenuDialog";
 import { RuntimeChip } from "@/components/lobby/RuntimeChip";
 import { MyTableRow } from "@/components/lobby/MyTableRow";
+import { GlobalLeaderboard } from "@/components/lobby/GlobalLeaderboard";
 
 export const Route = createFileRoute("/_authenticated/lobby")({
   head: () => ({
@@ -176,6 +177,10 @@ function LobbyPage() {
               </div>
             </button>
           ))}
+        </div>
+
+        <div className="mt-10">
+          <GlobalLeaderboard games={games} />
         </div>
 
         <GameMenuDialog
