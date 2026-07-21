@@ -56,6 +56,51 @@ exports.handler = async (event) => {
   const gameId = event.queryStringParameters?.gameId;
   if (!gameId) return badRequest("gameId query param required");
   try {
+    // Global leaderboard: aggregate gamerscore across every game.
+    if (gameId === "global" || gameId === "all") {
+      const items = [];
+      let ExclusiveStartKey;
+      do {
+        const res = await ddb.send(
+          new ScanCommand({ TableName: tables.stats, ExclusiveStartKey })
+        );
+        items.push(...(res.Items || []));
+        ExclusiveStartKey = res.LastEvaluatedKey;
+      } while (ExclusiveStartKey);
+
+      const byUser = new Map();
+      for (const row of items) {
+        const existing = byUser.get(row.userId) || {
+          userId: row.userId,
+          gameId: "global",
+          username: row.username,
+          gamerscore: 0,
+          gamesPlayed: 0,
+          gamesWon: 0,
+          totalPoints: 0,
+          updatedAt: row.updatedAt,
+          lastMatchAt: row.lastMatchAt,
+        };
+        existing.username = row.username || existing.username;
+        existing.gamerscore += n(row.gamerscore);
+        existing.gamesPlayed += n(row.gamesPlayed);
+        existing.gamesWon += n(row.gamesWon);
+        existing.totalPoints += n(row.totalPoints);
+        if (!existing.updatedAt || (row.updatedAt && row.updatedAt > existing.updatedAt)) {
+          existing.updatedAt = row.updatedAt;
+        }
+        if (!existing.lastMatchAt || (row.lastMatchAt && row.lastMatchAt > existing.lastMatchAt)) {
+          existing.lastMatchAt = row.lastMatchAt;
+        }
+        byUser.set(row.userId, existing);
+      }
+      const leaderboard = Array.from(byUser.values())
+        .filter((r) => r.gamesPlayed > 0)
+        .sort((a, b) => b.gamerscore - a.gamerscore || b.gamesWon - a.gamesWon)
+        .slice(0, 25);
+      return ok({ gameId: "global", leaderboard });
+    }
+
     const ids = gameIdsForLeaderboard(gameId);
     const names = { "#gameId": "gameId" };
     const values = Object.fromEntries(ids.map((id, i) => [`:g${i}`, id]));
