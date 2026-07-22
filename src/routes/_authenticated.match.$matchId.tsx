@@ -407,7 +407,18 @@ function GameView({
   const order = match._order ?? match.players;
   const currentUser = order[(match.turn ?? 0) % order.length];
   const isMyTurn = currentUser === userId;
-  const myHand = match.hands?.[userId] ?? [];
+  // If the viewer has already gone out this round their real hand is empty,
+  // but we want to keep displaying the cards they laid down so the seat
+  // isn't suddenly blank. Synthesize a hand from their laid melds.
+  const rawHand = match.hands?.[userId] ?? [];
+  const myLaidMelds = match.laidMelds?.[userId];
+  const myHand = useMemo(() => {
+    if (rawHand.length === 0 && myLaidMelds && myLaidMelds.length > 0) {
+      return myLaidMelds.flat();
+    }
+    return rawHand;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawHand.join("|"), myLaidMelds ? myLaidMelds.map((m) => m.join(",")).join("|") : ""]);
   const sorted = useMemo(() => sortHand(myHand, match.wildRank), [myHand, match.wildRank]);
   const wildRank = match.wildRank ?? null;
 
