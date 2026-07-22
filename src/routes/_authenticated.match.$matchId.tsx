@@ -893,7 +893,7 @@ function GameView({
             style={{ ["--hand-squeeze" as unknown as string]: `${handSqueeze}px` }}
           >
               <AnimatePresence initial={false}>
-                {arrangement.melds.map((rawMeld, mi) => {
+                {displayMelds.map((rawMeld, mi) => {
                   const meld = orderMeldForDisplay(rawMeld, wildRank);
                   return (
                   <motion.div
@@ -948,7 +948,7 @@ function GameView({
                 </DndContext>
               </AnimatePresence>
               {sorted.length === 0 && <p className="self-center text-sm text-white/60">No cards in hand.</p>}
-              {sorted.length > 0 && unmelded.length === 0 && arrangement.melds.length > 0 && (
+              {sorted.length > 0 && unmelded.length === 0 && displayMelds.length > 0 && (
                 canLayDown ? (
                   <p className="self-center text-sm text-amber-200/80">All cards melded — lay down to go out.</p>
                 ) : canDiscard ? (
