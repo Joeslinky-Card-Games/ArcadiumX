@@ -552,7 +552,21 @@ function GameView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [myHand.join("|"), wildRank],
   );
-  const meldedIds = useMemo(() => new Set(arrangement.melds.flat()), [arrangement]);
+  // When the player has the option to lay down / go out, preview that final
+  // arrangement (all cards melded except the discard) directly in the hand
+  // instead of waiting for them to click the button.
+  const canPreviewGoOut =
+    arrangement.complete &&
+    Boolean(arrangement.goOutMelds) &&
+    isMyTurn &&
+    Boolean(match.hasDrawn) &&
+    !roundComplete &&
+    !matchComplete;
+  const displayMelds = useMemo(
+    () => (canPreviewGoOut && arrangement.goOutMelds ? arrangement.goOutMelds : arrangement.melds),
+    [canPreviewGoOut, arrangement.goOutMelds, arrangement.melds],
+  );
+  const meldedIds = useMemo(() => new Set(displayMelds.flat()), [displayMelds]);
   const unmelded = useMemo(() => sorted.filter((c) => !meldedIds.has(c)), [sorted, meldedIds]);
   const unmeldedScore = unmelded.reduce((s, c) => s + cardPoints(c), 0);
 
@@ -572,10 +586,10 @@ function GameView({
     return [...kept, ...rest];
   }, [unmelded, manualOrder]);
   const hasCustomSort = manualOrder.length > 0;
-  const totalHandCards = arrangement.melds.flat().length + orderedUnmelded.length;
+  const totalHandCards = displayMelds.flat().length + orderedUnmelded.length;
   const handLayoutKey = useMemo(
-    () => `${arrangement.melds.map((m) => m.join(",")).join("|")}::${orderedUnmelded.join(",")}`,
-    [arrangement.melds, orderedUnmelded],
+    () => `${displayMelds.map((m) => m.join(",")).join("|")}::${orderedUnmelded.join(",")}`,
+    [displayMelds, orderedUnmelded],
   );
   // Dynamic squeeze: measure the row and apply negative margin to each
   // child after the first so cards always fit without horizontal scroll.
