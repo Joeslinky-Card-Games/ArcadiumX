@@ -7,12 +7,14 @@ function stockSizeFor(n) {
   return 10;
 }
 
-function startMatch({ matchId, players }) {
+function startMatch({ matchId, players, dealSeed }) {
   if (!Array.isArray(players) || players.length < 2 || players.length > 6) {
     throw new Error("Stack Attack requires 2-6 players");
   }
   return {
     matchId,
+    // Random per-game seed so "play again" on the same matchId deals fresh hands.
+    dealSeed: dealSeed || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
     players: players.slice(),
     round: 0,
     scores: Object.fromEntries(players.map((p) => [p, 0])),
@@ -32,7 +34,7 @@ function startMatch({ matchId, players }) {
 }
 
 function startRound(state, round) {
-  const seed = `sa:${state.matchId}:${round}`;
+  const seed = `sa:${state.matchId}:${state.dealSeed ?? ""}:${round}`;
   const deck = shuffle(buildDeck(), seed);
   const dealerIdx = (round - 1) % state.players.length;
   const order = [];
@@ -80,7 +82,7 @@ function currentPlayer(state) {
 function refillDrawIfNeeded(state, needed = 1) {
   if (state.drawPile.length >= needed) return;
   if (state.archive.length === 0) return;
-  const seed = `sa:${state.matchId}:${state.round}:reshuffle:${state.turn}:${state.drawPile.length}`;
+  const seed = `sa:${state.matchId}:${state.dealSeed ?? ""}:${state.round}:reshuffle:${state.turn}:${state.drawPile.length}`;
   const merged = state.drawPile.concat(state.archive);
   state.drawPile = shuffle(merged, seed);
   state.archive = [];
