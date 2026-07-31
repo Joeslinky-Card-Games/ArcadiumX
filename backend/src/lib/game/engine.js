@@ -6,12 +6,14 @@ const { minUnmeldedPoints } = require("./autoMeld");
 
 const TOTAL_ROUNDS = 13;
 
-function startMatch({ matchId, players }) {
+function startMatch({ matchId, players, dealSeed }) {
   if (!Array.isArray(players) || players.length < 2 || players.length > 6) {
     throw new Error("Charlotte's Web requires 2-6 players");
   }
   return {
     matchId,
+    // Random per-game seed so "play again" on the same matchId deals fresh hands.
+    dealSeed: dealSeed || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
     players: players.slice(),
     round: 0,
     scores: Object.fromEntries(players.map((p) => [p, 0])),
@@ -35,7 +37,7 @@ function startMatch({ matchId, players }) {
 function startRound(state, round) {
   const handSize = handSizeForRound(round);
   const wildRank = wildRankForRound(round);
-  const seed = `${state.matchId}:${round}`;
+  const seed = `${state.matchId}:${state.dealSeed ?? ""}:${round}`;
   const deck = shuffle(buildDeck(), seed);
   const hands = {};
   const dealerIdx = (round - 1) % state.players.length;
@@ -97,7 +99,7 @@ function doDrawStock(state, userId) {
     if (state.discard.length <= 1) throw new Error("No cards left to draw");
     const top = state.discard[state.discard.length - 1];
     const rest = state.discard.slice(0, -1);
-    state.stock = shuffle(rest, `${state.matchId}:${state.round}:reshuffle:${state.turn}`);
+    state.stock = shuffle(rest, `${state.matchId}:${state.dealSeed ?? ""}:${state.round}:reshuffle:${state.turn}`);
     state.discard = [top];
   }
   const card = state.stock.shift();
