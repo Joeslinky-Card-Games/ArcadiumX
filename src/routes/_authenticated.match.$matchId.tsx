@@ -32,6 +32,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { StackAttackMatch } from "@/components/stackattack/StackAttackMatch";
+import { YahtzeeMatch } from "@/components/yahtzee/YahtzeeMatch";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 
 // Simple context so any Avatar/name in the match tree can trigger the
@@ -92,6 +93,9 @@ function MatchPage() {
   const gameId = peek.data?.gameId;
   if (gameId === "stack-attack") {
     return <StackAttackMatch matchId={matchId} />;
+  }
+  if (gameId === "yahtzee") {
+    return <YahtzeeMatch matchId={matchId} />;
   }
   return <CharlottesWebMatchInner matchId={matchId} />;
 }

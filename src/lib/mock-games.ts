@@ -9,6 +9,13 @@ export type Game = {
 
 export const MOCK_GAMES: Game[] = [
   {
+    id: "yahtzee",
+    name: "Yahtzee",
+    description: "Roll five dice for 13 turns. Fill every box on your scorecard — highest total wins.",
+    players: "1–6 players",
+    status: "available",
+  },
+  {
     id: "hearts",
     name: "Hearts",
     description: "Classic trick-taking game. Avoid the queen of spades.",

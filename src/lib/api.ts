@@ -109,6 +109,42 @@ export type MatchView = Match & {
   completedCount?: number;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   _order?: string[];
+  // ---- Yahtzee ----
+  dice?: number[];
+  held?: boolean[];
+  rollsUsed?: number;
+  rollsLeft?: number;
+  rollSeq?: number;
+  scorecards?: Record<string, YahtzeeCard>;
+  potentials?: Record<
+    string,
+    { filled: number | null; legal: boolean; potential?: number | null }
+  >;
+  cardTotals?: Record<string, number>;
+  upperSums?: Record<string, number>;
+  upperBonuses?: Record<string, number>;
+  filledCounts?: Record<string, number>;
+  currentPlayer?: string;
+  myTurn?: boolean;
+};
+
+export type YahtzeeCategory =
+  | "ones"
+  | "twos"
+  | "threes"
+  | "fours"
+  | "fives"
+  | "sixes"
+  | "threeKind"
+  | "fourKind"
+  | "fullHouse"
+  | "smallStraight"
+  | "largeStraight"
+  | "yahtzee"
+  | "chance";
+
+export type YahtzeeCard = Record<YahtzeeCategory, number | null> & {
+  yahtzeeBonus: number;
 };
 
 export type ChatMessage = {

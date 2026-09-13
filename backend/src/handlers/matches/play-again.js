@@ -29,7 +29,10 @@ exports.handler = withAuth(async (event, { userId }) => {
 
     const votes = Array.isArray(match.playAgain) ? match.playAgain.slice() : [];
     if (!votes.includes(userId)) votes.push(userId);
-    const allVoted = match.players.every((p) => votes.includes(p));
+    const aiSet = new Set(Array.isArray(match.aiPlayers) ? match.aiPlayers : []);
+    const allVoted = match.players
+      .filter((p) => !aiSet.has(p) && !String(p).startsWith("ai-"))
+      .every((p) => votes.includes(p));
 
     let next;
     if (allVoted) {
@@ -50,6 +53,9 @@ exports.handler = withAuth(async (event, { userId }) => {
         minPlayers: match.minPlayers,
         visibility: match.visibility,
         ...(match.passwordHash ? { passwordHash: match.passwordHash } : {}),
+        ...(Array.isArray(match.aiPlayers) && match.aiPlayers.length
+          ? { aiPlayers: match.aiPlayers }
+          : {}),
         version: expectedVersion + 1,
         scores: Object.fromEntries(match.players.map((p) => [p, 0])),
         round: 0,

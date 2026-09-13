@@ -45,7 +45,9 @@ function LobbyPage() {
 
   const games: Game[] = gamesQuery.data?.games ?? MOCK_GAMES.map((g) => ({
     id: g.id, name: g.name, description: g.description,
-    minPlayers: 2, maxPlayers: 4, status: g.status,
+    minPlayers: g.id === "yahtzee" ? 1 : 2,
+    maxPlayers: g.id === "poker" ? 9 : 6,
+    status: g.status,
   }));
 
   const myMatches = myMatchesQuery.data?.matches ?? [];

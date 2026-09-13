@@ -3,17 +3,22 @@ import { Button } from "@/components/ui/button";
 
 export function RulesContent({ gameId }: { gameId?: string }) {
   if (gameId === "stack-attack") return <StackAttackRules />;
+  if (gameId === "yahtzee") return <YahtzeeRules />;
   return <CharlottesWebRules />;
 }
 
 export function rulesTitle(gameId?: string): string {
   if (gameId === "stack-attack") return "Stack Attack — how to play";
+  if (gameId === "yahtzee") return "Yahtzee — how to play";
   return "Charlotte's Web — how to play";
 }
 
 export function rulesSubtitle(gameId?: string): string {
   if (gameId === "stack-attack") {
     return "Empty your stockpile first by playing cards in 1→12 sequences.";
+  }
+  if (gameId === "yahtzee") {
+    return "Thirteen turns of rolling five dice. Highest score wins.";
   }
   return "A 13-round rummy variant with expanding hands and a rotating wild rank.";
 }
@@ -141,6 +146,64 @@ function CharlottesWebRules() {
               lights up when a complete lay-down is possible.
             </p>
           </section>
+    </>
+  );
+}
+
+function YahtzeeRules() {
+  return (
+    <>
+      <section>
+        <h3 className="font-semibold text-amber-200">The turn</h3>
+        <p>
+          Each game lasts <strong>13 turns</strong> per player — one for each box on
+          the scorecard. On your turn you roll five dice, then you may reroll any
+          of them up to two more times. After that (or sooner, if you like) you
+          must fill one empty box.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-semibold text-amber-200">Upper section</h3>
+        <p>
+          Aces through Sixes score the total of dice showing that number. If those
+          six boxes add up to <strong>63 or more</strong> (three of each number),
+          you earn a <strong>35-point bonus</strong>.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-semibold text-amber-200">Lower section</h3>
+        <ul className="ml-5 list-disc space-y-1">
+          <li><strong>3 of a Kind / 4 of a Kind</strong> — at least 3 or 4 alike; score the sum of all five dice.</li>
+          <li><strong>Full House</strong> — three of one number and two of another; 25 points.</li>
+          <li><strong>Small Straight</strong> — four consecutive numbers; 30 points.</li>
+          <li><strong>Large Straight</strong> — five consecutive numbers; 40 points.</li>
+          <li><strong>Yahtzee</strong> — five of a kind; 50 points.</li>
+          <li><strong>Chance</strong> — any roll; score the sum of all five dice.</li>
+        </ul>
+        <p className="mt-2">
+          You may fill a box with a roll that doesn&apos;t qualify — it scores zero.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-semibold text-amber-200">Extra Yahtzees</h3>
+        <p>
+          If you roll five of a kind after the Yahtzee box is already filled with
+          50, you score a <strong>100-point Yahtzee bonus</strong> and must use
+          the joker rules: put it in the matching upper box if that box is open;
+          otherwise you may treat it as a joker in a lower box (full house and
+          straights score their full values). A Yahtzee scored as 0 in the Yahtzee
+          box earns no later bonuses, but joker placement still applies.
+        </p>
+      </section>
+      <section>
+        <h3 className="font-semibold text-amber-200">Bots</h3>
+        <p>
+          Table bots play a point-maximizing style: they protect the upper bonus
+          and large straight, take four-of-a-kind in the upper section on the
+          first turn, and only dump Yahtzee or four-of-a-kind when a zero is
+          unavoidable.
+        </p>
+      </section>
     </>
   );
 }
