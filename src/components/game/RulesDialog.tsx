@@ -188,11 +188,12 @@ function YahtzeeRules() {
         <h3 className="font-semibold text-amber-200">Extra Yahtzees</h3>
         <p>
           If you roll five of a kind after the Yahtzee box is already filled with
-          50, you score a <strong>100-point Yahtzee bonus</strong> and must use
-          the joker rules: put it in the matching upper box if that box is open;
-          otherwise you may treat it as a joker in a lower box (full house and
-          straights score their full values). A Yahtzee scored as 0 in the Yahtzee
-          box earns no later bonuses, but joker placement still applies.
+          50, you score a <strong>100-point Yahtzee bonus</strong> automatically
+          — you cannot write in the Yahtzee box again. Instead use the joker
+          rules: put it in the matching upper box (Aces–Sixes) if that box is
+          open; otherwise tap a lower box (full house and straights score their
+          full values). A Yahtzee scored as 0 in the Yahtzee box earns no later
+          bonuses, but joker placement still applies.
         </p>
       </section>
       <section>

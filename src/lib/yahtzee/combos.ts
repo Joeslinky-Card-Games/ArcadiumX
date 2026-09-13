@@ -80,6 +80,42 @@ export function bestCallableCombo(
   return detectCombos(dice).find((kind) => comboStillScorable(kind, card)) ?? null;
 }
 
+const UPPER_BOXES = ["ones", "twos", "threes", "fours", "fives", "sixes"] as const;
+const UPPER_BOX_LABEL: Record<(typeof UPPER_BOXES)[number], string> = {
+  ones: "Aces",
+  twos: "Twos",
+  threes: "Threes",
+  fours: "Fours",
+  fives: "Fives",
+  sixes: "Sixes",
+};
+
+export function isFiveOfAKind(dice: number[]): boolean {
+  return dice.length === 5 && dice.every((d) => d === dice[0]);
+}
+
+/** Extra Yahtzee is never written in the Yahtzee box again — joker + optional +100. */
+export function extraYahtzeeHelp(
+  dice: number[],
+  card?: { yahtzee?: number | null; [key: string]: number | null | undefined } | null,
+): { bonus: boolean; message: string } | null {
+  if (!card || !isFiveOfAKind(dice) || card.yahtzee == null) return null;
+  const face = dice[0];
+  const upper = UPPER_BOXES[face - 1];
+  const bonus = card.yahtzee === 50;
+  const bonusBit = bonus ? "+100 bonus. " : "";
+  if (upper && card[upper] == null) {
+    return {
+      bonus,
+      message: `Second Yahtzee — ${bonusBit}Leave the Yahtzee box. Tap ${UPPER_BOX_LABEL[upper]} on the scorecard (required).`,
+    };
+  }
+  return {
+    bonus,
+    message: `Second Yahtzee — ${bonusBit}Leave the Yahtzee box. Tap a highlighted lower box as a joker.`,
+  };
+}
+
 function takeFace(dice: TableDie[], used: Set<number>, face: number): TableDie[] {
   const out: TableDie[] = [];
   for (const d of dice) {

@@ -10,7 +10,7 @@ import { YahtzeeDie } from "./YahtzeeDie";
 import { YahtzeeScorecard } from "./YahtzeeScorecard";
 import { YahtzeeResultsDialog } from "./YahtzeeResultsDialog";
 import { ComboCallout } from "./ComboCallout";
-import { arrangeDice, bestCallableCombo, COMBO_RANK, type ComboKind, type TableDie } from "@/lib/yahtzee/combos";
+import { arrangeDice, bestCallableCombo, extraYahtzeeHelp, COMBO_RANK, type ComboKind, type TableDie } from "@/lib/yahtzee/combos";
 
 function botStepDelay(match: MatchView): number {
   const last = match.lastAction;
@@ -227,7 +227,7 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
   };
 
   const doScore = (category: YahtzeeCategory) => {
-    if (!myTurn || busy || freezeLayout) return;
+    if (!myTurn || busy) return;
     actionMut.mutate({ type: "score", category });
   };
 
@@ -247,6 +247,8 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
     };
   }
   const canToggle = myTurn && rollsLeft > 0 && !busy && !freezeLayout;
+  const myCard = match.scorecards?.[currentTurn ?? ""];
+  const jokerHelp = extraYahtzeeHelp(dice, myCard);
 
   return (
     <div
@@ -369,12 +371,14 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
                 </div>
               </div>
             </LayoutGroup>
-            <p className="mt-5 text-sm text-white/60">
-              {myTurn
-                ? rollsLeft > 0
-                  ? "Keep dice move to the top row, grouped by the best pattern."
-                  : "Choose a box on the scorecard."
-                : `Waiting for ${displayName(match, currentTurn ?? "", userId)}…`}
+            <p className={`mt-5 text-sm ${jokerHelp ? "text-amber-200 font-semibold" : "text-white/60"}`}>
+              {jokerHelp
+                ? jokerHelp.message
+                : myTurn
+                  ? rollsLeft > 0
+                    ? "Keep dice move to the top row, grouped by the best pattern."
+                    : "Choose a box on the scorecard."
+                  : `Waiting for ${displayName(match, currentTurn ?? "", userId)}…`}
             </p>
             <button
               className="mt-5 px-8 py-3 rounded-2xl bg-amber-400 text-slate-950 font-black tracking-wide disabled:opacity-35 hover:bg-amber-300"
@@ -391,7 +395,7 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
           match={match}
           userId={userId}
           myTurn={myTurn}
-          disabled={busy || !myTurn || freezeLayout}
+          disabled={busy || !myTurn}
           onScore={doScore}
         />
       </div>
