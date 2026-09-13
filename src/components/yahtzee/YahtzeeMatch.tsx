@@ -8,6 +8,16 @@ import { useClerkIdentity } from "@/lib/identity";
 import { RulesDialog } from "@/components/game/RulesDialog";
 import { YahtzeeDie } from "./YahtzeeDie";
 import { YahtzeeScorecard } from "./YahtzeeScorecard";
+import { YahtzeeResultsDialog } from "./YahtzeeResultsDialog";
+
+function botStepDelay(match: MatchView): number {
+  const last = match.lastAction;
+  if (last === "open") return 2200;
+  if (last === "roll") return 1700;
+  if (last === "hold") return 600;
+  if (last === "score") return 1100;
+  return 1800;
+}
 
 function displayName(match: MatchView, userId: string, self: string): string {
   if (userId === self) return "You";
@@ -98,10 +108,10 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
       api<MatchView>(`/matches/${matchId}/ai-step`, { method: "POST" })
         .then((data) => qc.setQueryData(["match", matchId], data))
         .catch(() => {});
-    }, 650);
+    }, match ? botStepDelay(match) : 1800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldStepAI, currentTurn, match?.rollsUsed, match?.dice?.join(","), matchId]);
+  }, [shouldStepAI, currentTurn, match?.rollsUsed, match?.dice?.join(","), match?.lastAction, matchId]);
 
   if (!match) {
     return <div className="p-8 text-white/70">Loading match…</div>;
@@ -260,16 +270,6 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
               {busy ? "…" : rollsLeft > 0 ? `Roll (${rollsLeft} left)` : "No rerolls left"}
             </button>
             {error && <div className="mt-3 text-sm text-rose-300">{error}</div>}
-            {match.status === "complete" && (
-              <button
-                onClick={() => playAgainMut.mutate()}
-                className="mt-6 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 font-semibold text-slate-950"
-              >
-                {(match.playAgain ?? []).includes(userId)
-                  ? `Waiting… (${(match.playAgain ?? []).length}/${match.players.filter((p) => !String(p).startsWith("ai-")).length})`
-                  : "Play again"}
-              </button>
-            )}
           </div>
         </div>
 
@@ -281,6 +281,15 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
           onScore={doScore}
         />
       </div>
+
+      {match.status === "complete" && (
+        <YahtzeeResultsDialog
+          match={match}
+          userId={userId}
+          onPlayAgain={() => playAgainMut.mutate()}
+          playAgainPending={playAgainMut.isPending}
+        />
+      )}
 
       <RulesDialog
         open={rulesOpen}
