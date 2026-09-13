@@ -5,6 +5,8 @@ const CANONICAL_GAME_IDS = {
   rummy: "charlottes-web",
 };
 
+const HIGH_SCORE_WINS = new Set(["yahtzee"]);
+
 function isHuman(playerId) {
   return typeof playerId === "string" && !playerId.startsWith("ai-");
 }
@@ -147,11 +149,11 @@ async function recordMatchCompletion(match) {
   const matchId = match.matchId || null;
   // gamerscore: everyone who finishes a match earns a flat participation
   // base, then a margin bonus/penalty based on how far ahead or behind the
-  // average opponent they were. Lower raw score is better in every game we
-  // currently support, so
-  //   delta = BASE + round(avgOthers - myScore)
+  // average opponent they were. Card games here are low-score-wins except
+  // Yahtzee (high score wins).
   // Solo matches (no human opponents) just get the flat base.
   const BASE_GAMERSCORE = 10;
+  const highWins = HIGH_SCORE_WINS.has(gameId);
   const humanScores = humans.map((u) => Number(scores[u] || 0));
   const humanTotal = humanScores.reduce((s, v) => s + v, 0);
   await Promise.all(
@@ -160,7 +162,9 @@ async function recordMatchCompletion(match) {
       const points = Number(scores[userId] || 0);
       const others = humans.length > 1 ? humans.length - 1 : 1;
       const avgOthers = humans.length > 1 ? (humanTotal - points) / others : 0;
-      const margin = humans.length > 1 ? Math.round(avgOthers - points) : 0;
+      const margin = humans.length > 1
+        ? Math.round(highWins ? points - avgOthers : avgOthers - points)
+        : 0;
       const delta = BASE_GAMERSCORE + margin;
       const historyEntry = { at: now, delta, matchId, players: humans.length };
       return ddb.send(

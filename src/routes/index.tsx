@@ -5,18 +5,14 @@ import { SuitsBackground } from "@/components/home/SuitsBackground";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ArcadiumX — Play Charlotte's Web & Stack Attack online" },
+      { title: "ArcadiumX — Play Charlotte's Web, Stack Attack & Yahtzee online" },
       {
         name: "description",
         content:
-          "ArcadiumX is an online card game lounge. Play Charlotte's Web and Stack Attack with friends or solo against AI — no downloads.",
+          "ArcadiumX is an online game lounge. Play Charlotte's Web, Stack Attack, and Yahtzee with friends or solo against AI — no downloads.",
       },
       { property: "og:title", content: "ArcadiumX — Online card games" },
-      {
-        property: "og:description",
-        content:
-          "Play Charlotte's Web and Stack Attack with friends or solo against AI.",
-      },
+      { property: "og:description", content: "Play Charlotte's Web, Stack Attack, and Yahtzee with friends or solo against AI." },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -38,9 +34,9 @@ function Index() {
           Your seat at the <span className="text-primary">table</span>.
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-          Play Charlotte's Web and Stack Attack with friends from anywhere — or
-          jump into a solo match against AI. Create an account, pull up a chair,
-          and deal.
+          Play Charlotte's Web, Stack Attack, and Yahtzee with friends from
+          anywhere — or jump into a solo match against AI. Create an account,
+          pull up a chair, and deal.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link
@@ -60,8 +56,8 @@ function Index() {
         <div className="mt-24 grid w-full grid-cols-1 gap-6 text-left sm:grid-cols-3">
           {[
             {
-              title: "Distinct card games",
-              body: "Charlotte's Web — a 13-round rummy variant with shifting wilds. Stack Attack — race to empty your stockpile. More games on the way.",
+              title: "Distinct games",
+              body: "Charlotte's Web — a 13-round rummy variant with shifting wilds. Stack Attack — race to empty your stockpile. Yahtzee — thirteen turns of dice and a shared scorecard.",
             },
             {
               title: "Friends or AI",

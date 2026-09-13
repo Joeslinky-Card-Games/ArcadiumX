@@ -7,9 +7,14 @@ const saEngine = require("./stackattack/engine");
 const saView = require("./stackattack/view");
 const saAI = require("./stackattack/ai");
 
+const yzEngine = require("./yahtzee/engine");
+const yzView = require("./yahtzee/view");
+const yzAI = require("./yahtzee/ai");
+
 const REGISTRY = {
   "charlottes-web": { engine: cwEngine, view: cwView, ai: cwAI },
   "stack-attack": { engine: saEngine, view: saView, ai: saAI },
+  yahtzee: { engine: yzEngine, view: yzView, ai: yzAI },
 };
 
 function pick(gameId) {

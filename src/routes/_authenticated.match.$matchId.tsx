@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@clerk/tanstack-react-start";
 import { useApi, endpoints, type Game, type GameAction, type MatchView, type ChatMessage } from "@/lib/api";
+import { mergeGameCatalog } from "@/lib/games-catalog";
 import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
@@ -32,6 +33,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { StackAttackMatch } from "@/components/stackattack/StackAttackMatch";
+import { YahtzeeMatch } from "@/components/yahtzee/YahtzeeMatch";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 
 // Simple context so any Avatar/name in the match tree can trigger the
@@ -92,6 +94,9 @@ function MatchPage() {
   const gameId = peek.data?.gameId;
   if (gameId === "stack-attack") {
     return <StackAttackMatch matchId={matchId} />;
+  }
+  if (gameId === "yahtzee") {
+    return <YahtzeeMatch matchId={matchId} />;
   }
   return <CharlottesWebMatchInner matchId={matchId} />;
 }
@@ -265,7 +270,7 @@ function MatchProfileScope({ children }: { children: React.ReactNode }) {
     queryFn: () => endpoints.listGames(),
     staleTime: 5 * 60 * 1000,
   });
-  const games: Game[] = gamesQ.data?.games ?? [];
+  const games: Game[] = mergeGameCatalog(gamesQ.data?.games);
   return (
     <ProfileContext.Provider value={setTarget}>
       {children}
