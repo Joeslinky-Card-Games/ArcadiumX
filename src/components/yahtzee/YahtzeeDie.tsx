@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 
 const PIPS: Record<number, Array<[number, number]>> = {
   1: [[50, 50]],
@@ -32,45 +31,29 @@ export function YahtzeeDie({
     setShown(1 + Math.floor(Math.random() * 6));
     const t = setInterval(() => {
       setShown(1 + Math.floor(Math.random() * 6));
-    }, 85);
+    }, 70);
     return () => clearInterval(t);
   }, [spinning, face]);
 
   const pips = PIPS[shown] ?? PIPS[1];
   return (
-    <motion.button
-      key={spinning ? "rolling" : "idle"}
+    <button
       type="button"
       disabled={disabled || spinning}
       onClick={onClick}
       aria-label={`Die showing ${face}${held ? ", kept" : ""}${spinning ? ", rolling" : ""}`}
-      animate={
-        spinning
-          ? {
-              rotate: [0, 95, 210, 330, 455, 360],
-              y: [0, -34, 10, -18, 6, 0],
-              x: [0, 10, -12, 8, -4, 0],
-              scale: [1, 0.88, 1.08, 0.94, 1.04, 1],
-            }
-          : { rotate: 0, y: 0, x: 0, scale: 1 }
-      }
-      transition={
-        spinning
-          ? { duration: 1.12, ease: [0.18, 0.7, 0.22, 1] }
-          : { type: "spring", stiffness: 420, damping: 22 }
-      }
-      className={`relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem] rounded-2xl shadow-lg [transform-style:preserve-3d]
+      className={`relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem] rounded-2xl shadow-lg
         ${held ? "bg-amber-100 ring-2 ring-amber-400" : "bg-white"}
         ${disabled || spinning ? "cursor-default" : "cursor-pointer hover:-translate-y-0.5"}
       `}
     >
       {pips.map(([x, y], i) => (
         <span
-          key={i}
+          key={`${shown}-${i}`}
           className="absolute h-2.5 w-2.5 sm:h-3 sm:w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900"
           style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
-    </motion.button>
+    </button>
   );
 }

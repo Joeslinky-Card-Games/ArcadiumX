@@ -63,6 +63,23 @@ export function bestCombo(dice: number[]): ComboKind | null {
   return detectCombos(dice)[0] ?? null;
 }
 
+/** Yahtzee can still score after the box is filled (bonus / joker). Other boxes call out once. */
+export function comboStillScorable(
+  kind: ComboKind,
+  card?: { [K in ComboKind]?: number | null } | null,
+): boolean {
+  if (!card) return true;
+  if (kind === "yahtzee") return true;
+  return card[kind] == null;
+}
+
+export function bestCallableCombo(
+  dice: number[],
+  card?: { [K in ComboKind]?: number | null } | null,
+): ComboKind | null {
+  return detectCombos(dice).find((kind) => comboStillScorable(kind, card)) ?? null;
+}
+
 function takeFace(dice: TableDie[], used: Set<number>, face: number): TableDie[] {
   const out: TableDie[] = [];
   for (const d of dice) {
