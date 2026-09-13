@@ -126,6 +126,8 @@ export type MatchView = Match & {
   filledCounts?: Record<string, number>;
   currentPlayer?: string;
   myTurn?: boolean;
+  lastAction?: "open" | "roll" | "hold" | "score";
+  winners?: string[];
 };
 
 export type YahtzeeCategory =

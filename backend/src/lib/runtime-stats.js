@@ -31,7 +31,7 @@ async function recordCompletedMatch(match) {
   const durationMs = computeDurationMs(match);
   if (durationMs == null) return false;
   const players = parsePlayerCount(match);
-  if (players < 2) return false;
+  if (players < 1) return false;
 
   const msAttr = `p${players}Ms`;
   const cntAttr = `p${players}Cnt`;

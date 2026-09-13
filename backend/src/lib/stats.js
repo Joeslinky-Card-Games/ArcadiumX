@@ -15,6 +15,21 @@ function usernameFor(userId, usernames) {
   return String(usernames?.[userId] || `player-${String(userId).slice(-4)}`).slice(0, 64);
 }
 
+function matchWinners(match) {
+  if (Array.isArray(match?.winners) && match.winners.length) return match.winners;
+  if (match?.winner) return [match.winner];
+  if (match?.goneOutBy) return [match.goneOutBy];
+  return [];
+}
+
+function isWinner(match, userId) {
+  return matchWinners(match).includes(userId);
+}
+
+function roundWinner(match) {
+  return match?.goneOutBy || (matchWinners(match).length === 1 ? matchWinners(match)[0] : null);
+}
+
 function gameIdForStats(match) {
   const raw = typeof match?.gameId === "string" && match.gameId ? match.gameId : "charlottes-web";
   return CANONICAL_GAME_IDS[raw] || raw;
@@ -28,7 +43,7 @@ async function recordRoundCompletion(match) {
   const gameId = gameIdForStats(match);
   const usernames = match.usernames || {};
   const humans = (match.players || []).filter(isHuman);
-  const winner = match.goneOutBy;
+  const winner = roundWinner(match);
   await Promise.all(
     humans.map((userId) => {
       const won = userId === winner ? 1 : 0;
@@ -60,10 +75,9 @@ async function recordRoundsBackfill(match, rounds) {
   const gameId = gameIdForStats(match);
   const usernames = match.usernames || {};
   const humans = (match.players || []).filter(isHuman);
-  const winner = match.goneOutBy;
   await Promise.all(
     humans.map((userId) => {
-      const won = userId === winner ? 1 : 0;
+      const won = isWinner(match, userId) ? 1 : 0;
       return ddb.send(
         new UpdateCommand({
           TableName: tables.stats,
@@ -141,7 +155,6 @@ async function raiseStatsToFloor(userId, gameId, totals, username) {
 async function recordMatchCompletion(match) {
   if (!match || match.status !== "complete") return;
   const gameId = gameIdForStats(match);
-  const winner = match.winner;
   const usernames = match.usernames || {};
   const humans = (match.players || []).filter(isHuman);
   const scores = match.scores || {};
@@ -149,20 +162,21 @@ async function recordMatchCompletion(match) {
   const matchId = match.matchId || null;
   // gamerscore: everyone who finishes a match earns a flat participation
   // base, then a margin bonus/penalty based on how far ahead or behind the
-  // average opponent they were. Card games here are low-score-wins except
-  // Yahtzee (high score wins).
-  // Solo matches (no human opponents) just get the flat base.
+  // average opponent they were. Card games are low-score-wins except Yahtzee
+  // (high score wins). Yahtzee also counts seated bots in the margin so a
+  // solo-vs-AI game still moves gamerscore with the score gap.
   const BASE_GAMERSCORE = 10;
   const highWins = HIGH_SCORE_WINS.has(gameId);
-  const humanScores = humans.map((u) => Number(scores[u] || 0));
-  const humanTotal = humanScores.reduce((s, v) => s + v, 0);
+  const marginIds = highWins ? (match.players || []) : humans;
+  const marginScores = marginIds.map((u) => Number(scores[u] || 0));
+  const marginTotal = marginScores.reduce((s, v) => s + v, 0);
   await Promise.all(
     humans.map((userId) => {
-      const won = userId === winner ? 1 : 0;
+      const won = isWinner(match, userId) ? 1 : 0;
       const points = Number(scores[userId] || 0);
-      const others = humans.length > 1 ? humans.length - 1 : 1;
-      const avgOthers = humans.length > 1 ? (humanTotal - points) / others : 0;
-      const margin = humans.length > 1
+      const others = marginIds.length > 1 ? marginIds.length - 1 : 0;
+      const avgOthers = others > 0 ? (marginTotal - points) / others : 0;
+      const margin = others > 0
         ? Math.round(highWins ? points - avgOthers : avgOthers - points)
         : 0;
       const delta = BASE_GAMERSCORE + margin;
@@ -190,10 +204,28 @@ async function recordMatchCompletion(match) {
   );
 }
 
+async function flushMatchStats(prev, next) {
+  const gameId = gameIdForStats(next);
+  const roundJustFinalized =
+    (next.status === "round-complete" || next.status === "complete") &&
+    (prev.roundsRecordedThrough ?? 0) < (next.round ?? 0);
+  if (roundJustFinalized) {
+    if (gameId === "yahtzee" && next.status === "complete") {
+      await recordRoundsBackfill(next, Math.max(1, Number(next.round) || 13));
+    } else {
+      await recordRoundCompletion(next);
+    }
+  }
+  if (next.status === "complete" && !prev.statsRecorded) {
+    await recordMatchCompletion(next);
+  }
+}
+
 module.exports = {
   recordMatchCompletion,
   recordRoundCompletion,
   recordRoundsBackfill,
   raiseStatsToFloor,
   gameIdForStats,
+  flushMatchStats,
 };

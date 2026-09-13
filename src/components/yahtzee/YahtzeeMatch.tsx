@@ -1,13 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useUser } from "@clerk/tanstack-react-start";
-import { motion } from "framer-motion";
+import { motion, LayoutGroup } from "framer-motion";
 import { useApi, type MatchView, type YahtzeeCategory } from "@/lib/api";
 import { useClerkIdentity } from "@/lib/identity";
 import { RulesDialog } from "@/components/game/RulesDialog";
 import { YahtzeeDie } from "./YahtzeeDie";
 import { YahtzeeScorecard } from "./YahtzeeScorecard";
+import { YahtzeeResultsDialog } from "./YahtzeeResultsDialog";
+import { ComboCallout } from "./ComboCallout";
+import { arrangeDice, bestCallableCombo, extraYahtzeeHelp, COMBO_RANK, type ComboKind, type TableDie } from "@/lib/yahtzee/combos";
+
+function botStepDelay(match: MatchView): number {
+  const last = match.lastAction;
+  if (last === "open") return 2200;
+  if (last === "roll") return 1700;
+  if (last === "hold") return 600;
+  if (last === "score") return 1100;
+  return 1800;
+}
 
 function displayName(match: MatchView, userId: string, self: string): string {
   if (userId === self) return "You";
@@ -24,6 +36,16 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [held, setHeld] = useState<boolean[]>([false, false, false, false, false]);
+  const [comboBurst, setComboBurst] = useState<ComboKind | null>(null);
+  const comboSeen = useRef({ turn: -1, rank: 0 });
+  const [spinning, setSpinning] = useState<boolean[]>([false, false, false, false, false]);
+  const lastSpinKey = useRef("");
+  const [settledSpinKey, setSettledSpinKey] = useState("");
+  const settledLayout = useRef<{
+    kept: number[];
+    rolling: number[];
+    showAllKept: boolean;
+  }>({ kept: [], rolling: [0, 1, 2, 3, 4], showAllKept: false });
 
   const query = useQuery({
     queryKey: ["match", matchId],
@@ -58,9 +80,50 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
   }, [needsRefresh, matchId, identity.displayName, identity.avatarUrl]);
 
   useEffect(() => {
+    if (!match || match.status !== "in-progress") return;
+    if (match.lastAction !== "roll" && match.lastAction !== "open") return;
+    const key = `${match.turn}-${match.rollSeq}-${match.lastAction}`;
+    if (key === lastSpinKey.current) return;
+    lastSpinKey.current = key;
+    const mask = (match.dice ?? [1, 1, 1, 1, 1]).map(
+      (_, i) => match.lastAction === "open" || !match.held?.[i],
+    );
+    setSpinning(mask);
+    const t = setTimeout(() => {
+      setSpinning([false, false, false, false, false]);
+      setSettledSpinKey(key);
+    }, 720);
+    return () => clearTimeout(t);
+  }, [match?.rollSeq, match?.turn, match?.lastAction, match?.status]);
+
+  useEffect(() => {
     if (!match?.held) return;
+    if (spinning.some(Boolean)) return;
     setHeld(match.held.map(Boolean));
-  }, [match?.dice?.join(","), match?.rollsUsed, match?.turn, match?.held?.join(",")]);
+  }, [match?.dice?.join(","), match?.rollsUsed, match?.turn, match?.held?.join(","), spinning]);
+
+  useEffect(() => {
+    if (!match?.dice || match.status !== "in-progress") return;
+    if (spinning.some(Boolean)) return;
+    const spinKey = `${match.turn}-${match.rollSeq}-${match.lastAction}`;
+    if (
+      (match.lastAction === "roll" || match.lastAction === "open") &&
+      spinKey !== settledSpinKey
+    ) {
+      return;
+    }
+    const card = match.scorecards?.[match.currentPlayer ?? match._order?.[(match.turn ?? 0) % (match._order?.length || 1)] ?? ""];
+    const next = bestCallableCombo(match.dice, card);
+    const rank = next ? COMBO_RANK[next] : 0;
+    if ((match.turn ?? 0) !== comboSeen.current.turn) {
+      comboSeen.current = { turn: match.turn ?? 0, rank: 0 };
+    }
+    if (!next || rank <= comboSeen.current.rank) return;
+    comboSeen.current = { turn: match.turn ?? 0, rank };
+    setComboBurst(next);
+    const t = setTimeout(() => setComboBurst(null), next === "yahtzee" ? 2400 : 1700);
+    return () => clearTimeout(t);
+  }, [match?.dice?.join(","), match?.rollSeq, match?.turn, match?.status, match?.scorecards, match?.currentPlayer, spinning, settledSpinKey]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["match", matchId] });
 
@@ -98,10 +161,10 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
       api<MatchView>(`/matches/${matchId}/ai-step`, { method: "POST" })
         .then((data) => qc.setQueryData(["match", matchId], data))
         .catch(() => {});
-    }, 650);
+    }, match ? botStepDelay(match) : 1800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldStepAI, currentTurn, match?.rollsUsed, match?.dice?.join(","), matchId]);
+  }, [shouldStepAI, currentTurn, match?.rollsUsed, match?.dice?.join(","), match?.lastAction, matchId]);
 
   if (!match) {
     return <div className="p-8 text-white/70">Loading match…</div>;
@@ -145,14 +208,21 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
   const rollsLeft = match.rollsLeft ?? Math.max(0, 3 - (match.rollsUsed ?? 0));
   const order = match._order ?? match.players;
   const busy = actionMut.isPending;
+  const isSpinning = spinning.some(Boolean);
+  const incomingSpinKey =
+    match.lastAction === "roll" || match.lastAction === "open"
+      ? `${match.turn}-${match.rollSeq}-${match.lastAction}`
+      : settledSpinKey;
+  const freezeLayout = isSpinning || incomingSpinKey !== settledSpinKey;
 
   const toggleHold = (i: number) => {
-    if (!myTurn || rollsLeft <= 0 || busy) return;
+    if (!myTurn || rollsLeft <= 0 || busy || freezeLayout) return;
     setHeld((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
   };
 
   const doRoll = () => {
-    if (!myTurn || rollsLeft <= 0 || busy) return;
+    if (!myTurn || rollsLeft <= 0 || busy || freezeLayout) return;
+    setSpinning(held.map((h) => !h));
     actionMut.mutate({ type: "roll", held });
   };
 
@@ -160,6 +230,25 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
     if (!myTurn || busy) return;
     actionMut.mutate({ type: "score", category });
   };
+
+  const tableDice: TableDie[] = dice.map((face, index) => ({ face, index }));
+  const showAllKept = freezeLayout ? settledLayout.current.showAllKept : rollsLeft <= 0;
+  const kept = freezeLayout
+    ? settledLayout.current.kept.map((index) => tableDice[index]).filter(Boolean)
+    : arrangeDice(tableDice.filter((d) => showAllKept || held[d.index]));
+  const rolling = freezeLayout
+    ? settledLayout.current.rolling.map((index) => tableDice[index]).filter(Boolean)
+    : arrangeDice(tableDice.filter((d) => !showAllKept && !held[d.index]));
+  if (!freezeLayout) {
+    settledLayout.current = {
+      kept: kept.map((d) => d.index),
+      rolling: rolling.map((d) => d.index),
+      showAllKept,
+    };
+  }
+  const canToggle = myTurn && rollsLeft > 0 && !busy && !freezeLayout;
+  const myCard = match.scorecards?.[currentTurn ?? ""];
+  const jokerHelp = extraYahtzeeHelp(dice, myCard);
 
   return (
     <div
@@ -224,52 +313,81 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
             })}
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center rounded-3xl border border-emerald-500/20 bg-emerald-950/40 py-8 px-4">
-            <div className="text-xs uppercase tracking-[0.2em] text-emerald-200/70 mb-4">
+          <div className="relative flex flex-1 flex-col items-center justify-center overflow-visible rounded-3xl border border-emerald-500/20 bg-emerald-950/40 px-4 py-6">
+            <ComboCallout combo={comboBurst} />
+            <div className="mb-2 text-xs uppercase tracking-[0.2em] text-emerald-200/70">
               {rollsLeft === 2 ? "First reroll" : rollsLeft === 1 ? "Last reroll" : rollsLeft === 0 ? "Score this roll" : "Roll"}
             </div>
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-              {dice.map((face, i) => (
-                <motion.div
-                  key={`${match.rollSeq ?? 0}-${i}-${face}`}
-                  initial={{ rotate: -12, y: -18, opacity: 0.4 }}
-                  animate={{ rotate: 0, y: 0, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 380, damping: 18, delay: i * 0.04 }}
-                >
-                  <YahtzeeDie
-                    face={face}
-                    held={held[i]}
-                    disabled={!myTurn || rollsLeft <= 0 || busy}
-                    onClick={() => toggleHold(i)}
-                  />
-                </motion.div>
-              ))}
-            </div>
-            <p className="mt-4 text-sm text-white/60">
-              {myTurn
-                ? rollsLeft > 0
-                  ? "Tap dice to hold, then roll the rest."
-                  : "Choose a box on the scorecard."
-                : `Waiting for ${displayName(match, currentTurn ?? "", userId)}…`}
+            <LayoutGroup>
+              <div className="w-full max-w-lg rounded-2xl border border-amber-400/25 bg-amber-400/5 px-3 py-3">
+                <div className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200/80">
+                  Keep
+                </div>
+                <div className="flex min-h-[4.75rem] flex-wrap items-center justify-center gap-3 py-1 sm:gap-4">
+                  {kept.map((d) => (
+                    <motion.div
+                      key={d.index}
+                      layout={!freezeLayout}
+                      layoutId={`yz-die-${d.index}`}
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 380, damping: 22 }}
+                    >
+                      <YahtzeeDie
+                        face={d.face}
+                        held
+                        spinning={spinning[d.index]}
+                        disabled={!canToggle}
+                        onClick={() => toggleHold(d.index)}
+                      />
+                    </motion.div>
+                  ))}
+                  {kept.length === 0 && (
+                    <span className="text-sm text-amber-100/40">Tap dice below to keep them</span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-6 w-full max-w-lg">
+                <div className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">
+                  {showAllKept ? "All dice locked this turn" : "Roll"}
+                </div>
+                <div className="flex min-h-[4.75rem] flex-wrap items-center justify-center gap-3 py-1 sm:gap-4">
+                  {rolling.map((d) => (
+                    <motion.div
+                      key={d.index}
+                      layout={!freezeLayout}
+                      layoutId={`yz-die-${d.index}`}
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 380, damping: 22 }}
+                    >
+                      <YahtzeeDie
+                        face={d.face}
+                        held={false}
+                        spinning={spinning[d.index]}
+                        disabled={!canToggle}
+                        onClick={() => toggleHold(d.index)}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </LayoutGroup>
+            <p className={`mt-5 text-sm ${jokerHelp ? "text-amber-200 font-semibold" : "text-white/60"}`}>
+              {jokerHelp
+                ? jokerHelp.message
+                : myTurn
+                  ? rollsLeft > 0
+                    ? "Keep dice move to the top row, grouped by the best pattern."
+                    : "Choose a box on the scorecard."
+                  : `Waiting for ${displayName(match, currentTurn ?? "", userId)}…`}
             </p>
             <button
               className="mt-5 px-8 py-3 rounded-2xl bg-amber-400 text-slate-950 font-black tracking-wide disabled:opacity-35 hover:bg-amber-300"
-              disabled={!myTurn || rollsLeft <= 0 || busy}
+              disabled={!myTurn || rollsLeft <= 0 || busy || freezeLayout}
               onClick={doRoll}
             >
-              {busy ? "…" : rollsLeft > 0 ? `Roll (${rollsLeft} left)` : "No rerolls left"}
+              {busy || freezeLayout ? "Rolling…" : rollsLeft > 0 ? `Roll (${rollsLeft} left)` : "No rerolls left"}
             </button>
             {error && <div className="mt-3 text-sm text-rose-300">{error}</div>}
-            {match.status === "complete" && (
-              <button
-                onClick={() => playAgainMut.mutate()}
-                className="mt-6 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 font-semibold text-slate-950"
-              >
-                {(match.playAgain ?? []).includes(userId)
-                  ? `Waiting… (${(match.playAgain ?? []).length}/${match.players.filter((p) => !String(p).startsWith("ai-")).length})`
-                  : "Play again"}
-              </button>
-            )}
           </div>
         </div>
 
@@ -281,6 +399,15 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
           onScore={doScore}
         />
       </div>
+
+      {match.status === "complete" && (
+        <YahtzeeResultsDialog
+          match={match}
+          userId={userId}
+          onPlayAgain={() => playAgainMut.mutate()}
+          playAgainPending={playAgainMut.isPending}
+        />
+      )}
 
       <RulesDialog
         open={rulesOpen}
