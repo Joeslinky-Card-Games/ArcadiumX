@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useUser } from "@clerk/tanstack-react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useApi, endpoints, type Game, type PublicProfile } from "@/lib/api";
+import { mergeGameCatalog } from "@/lib/games-catalog";
 import { useMemo, useState } from "react";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { Button } from "@/components/ui/button";
@@ -150,6 +151,8 @@ function ProfilePage() {
     return all.sort((a, b) => a.at.localeCompare(b.at));
   }, [profileQ.data]);
 
+  const games: Game[] = mergeGameCatalog(gamesQ.data?.games);
+
   if (!user) return null;
 
   const rows: Array<{ label: string; value: string | null | undefined }> = [
@@ -225,7 +228,7 @@ function ProfilePage() {
           <p className="text-sm text-rose-500">Couldn't load stats.</p>
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border bg-card">
-            {(gamesQ.data?.games ?? []).filter((g) => g.status === "available").map((g: Game) => {
+            {games.filter((g) => g.status === "available").map((g: Game) => {
               const s = profileQ.data?.stats.find((x) => x.gameId === g.id);
               const played = s?.gamesPlayed ?? 0;
               const won = s?.gamesWon ?? 0;
@@ -246,7 +249,7 @@ function ProfilePage() {
                 </div>
               );
             })}
-            {(gamesQ.data?.games ?? []).filter((g) => g.status === "available").length === 0 && (
+            {games.filter((g) => g.status === "available").length === 0 && (
               <p className="px-5 py-4 text-sm text-muted-foreground">No games available.</p>
             )}
           </div>
@@ -259,7 +262,7 @@ function ProfilePage() {
         userId={user.id}
         fallbackName={user.fullName ?? user.username ?? null}
         fallbackAvatar={user.imageUrl ?? null}
-        games={gamesQ.data?.games}
+        games={games}
       />
     </main>
   );

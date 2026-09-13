@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useUser } from "@clerk/tanstack-react-start";
 import { useApi, endpoints, type Game, type GameAction, type MatchView, type ChatMessage } from "@/lib/api";
+import { mergeGameCatalog } from "@/lib/games-catalog";
 import { useClerkIdentity } from "@/lib/identity";
 import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingCard";
 import { sortHand, cardPoints } from "@/lib/game/cards";
@@ -269,7 +270,7 @@ function MatchProfileScope({ children }: { children: React.ReactNode }) {
     queryFn: () => endpoints.listGames(),
     staleTime: 5 * 60 * 1000,
   });
-  const games: Game[] = gamesQ.data?.games ?? [];
+  const games: Game[] = mergeGameCatalog(gamesQ.data?.games);
   return (
     <ProfileContext.Provider value={setTarget}>
       {children}

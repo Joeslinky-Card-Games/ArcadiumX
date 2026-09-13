@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useUser } from "@clerk/tanstack-react-start";
 import { API_URL, apiFetch, endpoints, useApi, type Game, type Match } from "@/lib/api";
 import { useClerkIdentity } from "@/lib/identity";
-import { MOCK_GAMES } from "@/lib/mock-games";
+import { mergeGameCatalog } from "@/lib/games-catalog";
 import { Button } from "@/components/ui/button";
 import { JoinDialog } from "@/components/lobby/JoinDialog";
 import { GameMenuDialog } from "@/components/lobby/GameMenuDialog";
@@ -43,12 +43,7 @@ function LobbyPage() {
     refetchInterval: 5000,
   });
 
-  const games: Game[] = gamesQuery.data?.games ?? MOCK_GAMES.map((g) => ({
-    id: g.id, name: g.name, description: g.description,
-    minPlayers: g.id === "yahtzee" ? 1 : 2,
-    maxPlayers: g.id === "poker" ? 9 : 6,
-    status: g.status,
-  }));
+  const games: Game[] = mergeGameCatalog(gamesQuery.data?.games);
 
   const myMatches = myMatchesQuery.data?.matches ?? [];
   const activeGame = games.find((g) => g.id === menuGameId) ?? null;
