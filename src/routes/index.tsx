@@ -12,9 +12,7 @@ export const Route = createFileRoute("/")({
           "ArcadiumX is an online game lounge. Play Charlotte's Web, Stack Attack, and Yahtzee with friends or solo against AI — no downloads.",
       },
       { property: "og:title", content: "ArcadiumX — Online card games" },
-      {
       { property: "og:description", content: "Play Charlotte's Web, Stack Attack, and Yahtzee with friends or solo against AI." },
-      },
       { property: "og:type", content: "website" },
     ],
   }),
