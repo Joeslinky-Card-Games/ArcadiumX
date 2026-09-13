@@ -94,7 +94,7 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
       setSettledSpinKey(key);
     }, 720);
     return () => clearTimeout(t);
-  }, [match?.rollSeq, match?.turn, match?.lastAction, match?.status, match?.dice, match?.held]);
+  }, [match?.rollSeq, match?.turn, match?.lastAction, match?.status]);
 
   useEffect(() => {
     if (!match?.held) return;

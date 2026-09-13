@@ -44,7 +44,7 @@ export function YahtzeeDie({
       aria-label={`Die showing ${face}${held ? ", kept" : ""}${spinning ? ", rolling" : ""}`}
       className={`relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem] rounded-2xl shadow-lg
         ${held ? "bg-amber-100 ring-2 ring-amber-400" : "bg-white"}
-        ${disabled || spinning ? "cursor-default" : "cursor-pointer hover:-translate-y-0.5"}
+        ${disabled || spinning ? "pointer-events-none cursor-default" : "cursor-pointer hover:-translate-y-0.5"}
       `}
     >
       {pips.map(([x, y], i) => (
