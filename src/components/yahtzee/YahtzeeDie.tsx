@@ -24,9 +24,9 @@ export function YahtzeeDie({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      aria-label={`Die showing ${face}${held ? ", held" : ""}`}
+      aria-label={`Die showing ${face}${held ? ", kept" : ""}`}
       className={`relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem] rounded-2xl shadow-lg transition
-        ${held ? "bg-amber-100 ring-4 ring-amber-400 -translate-y-1" : "bg-white hover:-translate-y-0.5"}
+        ${held ? "bg-amber-100 ring-2 ring-amber-400" : "bg-white hover:-translate-y-0.5"}
         ${disabled ? "cursor-default" : "cursor-pointer"}
       `}
     >
@@ -37,11 +37,6 @@ export function YahtzeeDie({
           style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
-      {held && (
-        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
-          Hold
-        </span>
-      )}
     </button>
   );
 }
