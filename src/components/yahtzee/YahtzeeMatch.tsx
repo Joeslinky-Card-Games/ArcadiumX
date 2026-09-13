@@ -83,7 +83,7 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
       (_, i) => match.lastAction === "open" || !match.held?.[i],
     );
     setSpinning(mask);
-    const t = setTimeout(() => setSpinning([false, false, false, false, false]), 760);
+    const t = setTimeout(() => setSpinning([false, false, false, false, false]), 1140);
     return () => clearTimeout(t);
   }, [match?.rollSeq, match?.turn, match?.lastAction, match?.status, match?.dice, match?.held]);
 
@@ -287,11 +287,11 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
                 <div className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200/80">
                   Keep
                 </div>
-                <div className="flex min-h-[5.5rem] flex-wrap items-center justify-center gap-3 overflow-visible py-2 sm:gap-4 [perspective:640px]">
+                <div className="flex min-h-[6rem] flex-wrap items-center justify-center gap-3 overflow-visible py-3 sm:gap-4 [perspective:640px]">
                   {kept.map((d) => (
                     <motion.div
                       key={d.index}
-                      layout
+                      layout={!spinning[d.index]}
                       layoutId={`yz-die-${d.index}`}
                       initial={false}
                       transition={{ type: "spring", stiffness: 380, damping: 22 }}
@@ -314,11 +314,11 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
                 <div className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">
                   {showAllKept ? "All dice locked this turn" : "Roll"}
                 </div>
-                <div className="flex min-h-[5.5rem] flex-wrap items-center justify-center gap-3 overflow-visible py-2 sm:gap-4 [perspective:640px]">
+                <div className="flex min-h-[6rem] flex-wrap items-center justify-center gap-3 overflow-visible py-3 sm:gap-4 [perspective:640px]">
                   {rolling.map((d) => (
                     <motion.div
                       key={d.index}
-                      layout
+                      layout={!spinning[d.index]}
                       layoutId={`yz-die-${d.index}`}
                       initial={false}
                       transition={{ type: "spring", stiffness: 380, damping: 22 }}

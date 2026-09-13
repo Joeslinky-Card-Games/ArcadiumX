@@ -32,7 +32,7 @@ export function YahtzeeDie({
     setShown(1 + Math.floor(Math.random() * 6));
     const t = setInterval(() => {
       setShown(1 + Math.floor(Math.random() * 6));
-    }, 65);
+    }, 85);
     return () => clearInterval(t);
   }, [spinning, face]);
 
@@ -47,17 +47,16 @@ export function YahtzeeDie({
       animate={
         spinning
           ? {
-              rotateX: [0, 180, 360, 540, 720],
-              rotateY: [0, 90, 200, 310, 360],
-              rotateZ: [0, 22, -18, 12, 0],
-              y: [0, -28, 6, -14, 0],
-              scale: [1, 0.92, 1.06, 0.96, 1],
+              rotate: [0, 95, 210, 330, 455, 360],
+              y: [0, -34, 10, -18, 6, 0],
+              x: [0, 10, -12, 8, -4, 0],
+              scale: [1, 0.88, 1.08, 0.94, 1.04, 1],
             }
-          : { rotateX: 0, rotateY: 0, rotateZ: 0, y: 0, scale: 1 }
+          : { rotate: 0, y: 0, x: 0, scale: 1 }
       }
       transition={
         spinning
-          ? { duration: 0.78, ease: [0.22, 0.8, 0.28, 1] }
+          ? { duration: 1.12, ease: [0.18, 0.7, 0.22, 1] }
           : { type: "spring", stiffness: 420, damping: 22 }
       }
       className={`relative h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem] rounded-2xl shadow-lg [transform-style:preserve-3d]
