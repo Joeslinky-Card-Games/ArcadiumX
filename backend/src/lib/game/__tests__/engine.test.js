@@ -159,6 +159,53 @@ test("going out on your last turn scores 0 for that round", () => {
   assert.equal(s.lastRoundScores[second], 0);
 });
 
+test("last-turn dump of extra card scores leftover melds as 0, not the discarded card", () => {
+  const m = startMatch({ matchId: "m-discard-meld", players: ["a", "b"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [first, second] = s._order;
+  s.hands[first] = ["5H1", "5S1", "5D1", "KC1"];
+  s.hasDrawn = true;
+  s.turn = 0;
+  applyAction(s, first, {
+    type: "lay-down",
+    melds: [["5H1", "5S1", "5D1"]],
+    discard: "KC1",
+  });
+  s.hands[second] = ["7H1", "7S1", "7D1"];
+  s.stock = ["KC2"];
+  applyAction(s, second, { type: "draw-stock" });
+  applyAction(s, second, { type: "discard", card: "KC2" });
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[second], 0);
+  assert.ok(!s.hands[second].includes("KC2"));
+  assert.deepEqual(s.lastRoundUnmelded[second], []);
+});
+
+test("round score is frozen at last discard even if the hand changes later", () => {
+  const m = startMatch({ matchId: "m-freeze", players: ["a", "b", "c"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [first, second, third] = s._order;
+  s.hands[first] = ["4H1", "4S1", "4D1", "KC1"];
+  s.hasDrawn = true;
+  s.turn = 0;
+  applyAction(s, first, {
+    type: "lay-down",
+    melds: [["4H1", "4S1", "4D1"]],
+    discard: "KC1",
+  });
+  s.hands[second] = ["AH1", "5C1", "9D1"];
+  s.stock = ["2C1", "3C1"];
+  applyAction(s, second, { type: "draw-stock" });
+  applyAction(s, second, { type: "discard", card: "AH1" });
+  assert.equal(s.lastTurnScores[second], 5 + 9 + 2);
+  s.hands[second].push("JK1");
+  s.hands[third] = ["3H1", "6C1", "8D1"];
+  applyAction(s, third, { type: "draw-stock" });
+  applyAction(s, third, { type: "discard", card: "3H1" });
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[second], 5 + 9 + 2);
+});
+
 test("go-out flow: opponents get one more turn then round finalizes", () => {
   const m = startMatch({ matchId: "m5", players: ["a", "b", "c"] });
   const s = startRound(m, 1);

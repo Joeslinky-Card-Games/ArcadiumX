@@ -1,6 +1,4 @@
-// Compute the minimum possible unmelded-card point total for a hand,
-// considering all valid ways to partition (a subset of) cards into melds.
-// Mirrors the client-side autoArrange DFS in src/lib/game/melds.ts.
+// Minimum unmelded-card points for a leftover hand after the last discard.
 const { validateMeld } = require("./melds");
 const { cardPoints } = require("./cards");
 
@@ -21,9 +19,9 @@ function sumBitsPts(mask, pts) {
   return s;
 }
 
-function minUnmeldedPoints(hand, wildRank) {
+function scoreDeadwood(hand, wildRank) {
   const n = hand.length;
-  if (n === 0) return 0;
+  if (n === 0) return { points: 0, unmelded: [] };
   const pts = hand.map((c) => cardPoints(c));
   const total = pts.reduce((a, b) => a + b, 0);
   const indices = hand.map((_, i) => i);
@@ -39,24 +37,33 @@ function minUnmeldedPoints(hand, wildRank) {
       }
     });
   }
-  cands.sort((a, b) => b.pts - a.pts);
 
-  let bestMelded = 0;
-  const dfs = (start, usedMask, meldedPts) => {
-    if (meldedPts > bestMelded) bestMelded = meldedPts;
-    let remaining = 0;
-    for (let i = start; i < cands.length; i++) {
-      if ((cands[i].mask & usedMask) === 0) remaining += cands[i].pts;
+  const N = 1 << n;
+  const dp = new Int32Array(N);
+  dp.fill(-1);
+  dp[0] = 0;
+  for (let mask = 0; mask < N; mask++) {
+    if (dp[mask] < 0) continue;
+    for (const c of cands) {
+      if (c.mask & mask) continue;
+      const next = mask | c.mask;
+      const val = dp[mask] + c.pts;
+      if (val > dp[next]) dp[next] = val;
     }
-    if (meldedPts + remaining <= bestMelded) return;
-    for (let i = start; i < cands.length; i++) {
-      const c = cands[i];
-      if ((c.mask & usedMask) !== 0) continue;
-      dfs(i + 1, usedMask | c.mask, meldedPts + c.pts);
-    }
-  };
-  dfs(0, 0, 0);
-  return total - bestMelded;
+  }
+  let bestMask = 0;
+  for (let mask = 1; mask < N; mask++) {
+    if (dp[mask] > dp[bestMask]) bestMask = mask;
+  }
+  const unmelded = [];
+  for (let i = 0; i < n; i++) {
+    if (((bestMask >> i) & 1) === 0) unmelded.push(hand[i]);
+  }
+  return { points: total - (dp[bestMask] || 0), unmelded };
 }
 
-module.exports = { minUnmeldedPoints };
+function minUnmeldedPoints(hand, wildRank) {
+  return scoreDeadwood(hand, wildRank).points;
+}
+
+module.exports = { minUnmeldedPoints, scoreDeadwood };
