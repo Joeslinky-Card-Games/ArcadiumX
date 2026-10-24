@@ -584,7 +584,8 @@ function GameView({
   );
   const meldedIds = useMemo(() => new Set(displayMelds.flat()), [displayMelds]);
   const unmelded = useMemo(() => sorted.filter((c) => !meldedIds.has(c)), [sorted, meldedIds]);
-  const unmeldedScore = unmelded.reduce((s, c) => s + cardPoints(c), 0);
+  const scoreMeldedIds = useMemo(() => new Set(arrangement.melds.flat()), [arrangement.melds]);
+  const unmeldedScore = sorted.filter((c) => !scoreMeldedIds.has(c)).reduce((s, c) => s + cardPoints(c), 0);
 
   // Manual drag-and-drop ordering of unmelded cards. The user's ordering wins
   // for any card they've touched; anything else falls back to the auto-sorted
@@ -720,6 +721,11 @@ function GameView({
     if (!pendingDiscard || !canDiscard) return;
     const card = pendingDiscard;
     setPendingDiscard(null);
+    const goOut = goOutOptions.find((o) => o.discard === card);
+    if (goOut) {
+      onAction({ type: "lay-down", melds: goOut.melds, discard: goOut.discard });
+      return;
+    }
     onAction({ type: "discard", card });
   };
 
@@ -1521,6 +1527,9 @@ function RoundSummary({
           {complete
             ? `Winner: ${displayName(match, match.winner ?? "", userId)}`
             : `Lowest total after 13 rounds wins.`}
+        </p>
+        <p className="mt-1 text-xs text-amber-100/80">
+          + Round is leftover deadwood after each player&apos;s last discard — the dumped card does not count.
         </p>
         <table className="mt-4 w-full text-sm">
           <thead>

@@ -90,6 +90,7 @@ export type MatchView = Match & {
   handCounts?: Record<string, number>;
   scores?: Record<string, number>;
   lastRoundScores?: Record<string, number> | null;
+  lastRoundUnmelded?: Record<string, string[]> | null;
   goneOutBy?: string | null;
   remainingFinalTurns?: number;
   hasDrawn?: boolean;

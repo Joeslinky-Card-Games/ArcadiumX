@@ -1,8 +1,7 @@
 const { buildDeck, shuffle } = require("./deck");
 const { handSizeForRound, wildRankForRound } = require("./cards");
 const { validateGoingOut } = require("./melds");
-const { scoreHand } = require("./score");
-const { minUnmeldedPoints } = require("./autoMeld");
+const { scoreDeadwood } = require("./autoMeld");
 
 const TOTAL_ROUNDS = 13;
 
@@ -29,6 +28,9 @@ function startMatch({ matchId, players, dealSeed }) {
     remainingFinalTurns: 0,
     hasDrawn: false,
     lastRoundScores: null,
+    lastRoundUnmelded: null,
+    lastTurnScores: {},
+    lastTurnUnmelded: {},
     laidMelds: {},
     _order: [],
   };
@@ -66,6 +68,8 @@ function startRound(state, round) {
     remainingFinalTurns: 0,
     hasDrawn: false,
     laidMelds: {},
+    lastTurnScores: {},
+    lastTurnUnmelded: {},
     _order: order,
   };
 }
@@ -126,6 +130,7 @@ function doDiscard(state, userId, card) {
   if (idx < 0) throw new Error("Card not in hand");
   hand.splice(idx, 1);
   state.discard.push(card);
+  snapshotLastTurn(state, userId);
   advanceTurn(state);
   state.version++;
   maybeFinalize(state);
@@ -151,9 +156,24 @@ function doLayDown(state, userId, melds, discardCard) {
     state.goneOutBy = userId;
     state.remainingFinalTurns = state._order.length - 1;
   }
+  snapshotLastTurn(state, userId);
   state.version++;
   maybeFinalize(state);
   return state;
+}
+
+function snapshotLastTurn(state, userId) {
+  if (!state.goneOutBy) return;
+  if (!state.lastTurnScores) state.lastTurnScores = {};
+  if (!state.lastTurnUnmelded) state.lastTurnUnmelded = {};
+  if (userId === state.goneOutBy || state.laidMelds?.[userId]) {
+    state.lastTurnScores[userId] = 0;
+    state.lastTurnUnmelded[userId] = [];
+    return;
+  }
+  const scored = scoreDeadwood(state.hands[userId] || [], state.wildRank);
+  state.lastTurnScores[userId] = scored.points;
+  state.lastTurnUnmelded[userId] = scored.unmelded;
 }
 
 function maybeFinalize(state) {
@@ -162,17 +182,23 @@ function maybeFinalize(state) {
 
 function finalizeRound(state) {
   const deltas = {};
+  const unmelded = {};
   for (const p of state.players) {
     if (p === state.goneOutBy || state.laidMelds?.[p]) {
       deltas[p] = 0;
+      unmelded[p] = [];
+    } else if (state.lastTurnScores && state.lastTurnScores[p] != null) {
+      deltas[p] = state.lastTurnScores[p];
+      unmelded[p] = state.lastTurnUnmelded?.[p] ?? [];
     } else {
-      // Score using the best possible meld arrangement so players who did not
-      // formally lay down are not penalized for cards that could have been melded.
-      deltas[p] = minUnmeldedPoints(state.hands[p] || [], state.wildRank);
+      const scored = scoreDeadwood(state.hands[p] || [], state.wildRank);
+      deltas[p] = scored.points;
+      unmelded[p] = scored.unmelded;
     }
     state.scores[p] += deltas[p];
   }
   state.lastRoundScores = deltas;
+  state.lastRoundUnmelded = unmelded;
   if (state.round >= TOTAL_ROUNDS) {
     state.status = "complete";
     const sorted = state.players.slice().sort((a, b) => state.scores[a] - state.scores[b]);

@@ -60,6 +60,152 @@ test("cannot act on someone else's turn", () => {
   assert.throws(() => applyAction(s, other, { type: "draw-stock" }));
 });
 
+test("last-turn discard is what gets scored, not the pre-turn hand", () => {
+  const m = startMatch({ matchId: "m-last-score", players: ["a", "b", "c"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [first, second, third] = s._order;
+  // First player goes out immediately.
+  s.hands[first] = ["7H1", "7S1", "7D1", "KC1"];
+  s.hasDrawn = true;
+  s.turn = 0;
+  applyAction(s, first, {
+    type: "lay-down",
+    melds: [["7H1", "7S1", "7D1"]],
+    discard: "KC1",
+  });
+  assert.equal(s.remainingFinalTurns, 2);
+
+  // Second player's last turn: deadwood that cannot meld. Draw a king, dump the ace.
+  // Before the turn: A=1, 5=5, 9=9 (15). After discard: 5+9+K=24.
+  s.hands[second] = ["AH1", "5C1", "9D1"];
+  s.stock = ["KC2", "2C1"];
+  applyAction(s, second, { type: "draw-stock" });
+  assert.deepEqual(s.hands[second].slice().sort(), ["5C1", "9D1", "AH1", "KC2"].sort());
+  applyAction(s, second, { type: "discard", card: "AH1" });
+  assert.equal(s.status, "in-progress");
+  assert.equal(s.remainingFinalTurns, 1);
+
+  // Third (last) player: draw a 2, keep a 4/6/8 deadwood = 18, dump the 2.
+  s.hands[third] = ["4H1", "6C1", "8D1"];
+  s.stock = ["2S1"];
+  applyAction(s, third, { type: "draw-stock" });
+  applyAction(s, third, { type: "discard", card: "2S1" });
+
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[first], 0);
+  assert.equal(s.lastRoundScores[second], 5 + 9 + 10);
+  assert.equal(s.lastRoundScores[third], 4 + 6 + 8);
+  assert.equal(s.scores[first], 0);
+  assert.equal(s.scores[second], 24);
+  assert.equal(s.scores[third], 18);
+});
+
+test("player immediately before the one who went out still gets a last turn", () => {
+  const m = startMatch({ matchId: "m-wrap", players: ["a", "b", "c"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [p0, p1, p2] = s._order;
+  // Middle player goes out so last turns wrap: p2 then p0.
+  s.turn = 1;
+  s.hands[p1] = ["8H1", "8S1", "8D1", "KC1"];
+  s.hasDrawn = true;
+  applyAction(s, p1, {
+    type: "lay-down",
+    melds: [["8H1", "8S1", "8D1"]],
+    discard: "KC1",
+  });
+  assert.equal(currentPlayer(s), p2);
+  assert.equal(s.remainingFinalTurns, 2);
+
+  s.hands[p2] = ["AH1", "3C1", "5D1"];
+  s.stock = ["4H2", "6C2"];
+  applyAction(s, p2, { type: "draw-stock" });
+  applyAction(s, p2, { type: "discard", card: "AH1" });
+  assert.equal(currentPlayer(s), p0);
+  assert.equal(s.remainingFinalTurns, 1);
+
+  s.hands[p0] = ["2H1", "4C1", "9D1"];
+  applyAction(s, p0, { type: "draw-stock" });
+  applyAction(s, p0, { type: "discard", card: "2H1" });
+
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[p1], 0);
+  assert.equal(s.lastRoundScores[p2], 3 + 5 + 4);
+  assert.equal(s.lastRoundScores[p0], 4 + 9 + 6);
+});
+
+test("going out on your last turn scores 0 for that round", () => {
+  const m = startMatch({ matchId: "m-last-out", players: ["a", "b"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [first, second] = s._order;
+  s.hands[first] = ["6H1", "6S1", "6D1", "KC1"];
+  s.hasDrawn = true;
+  s.turn = 0;
+  applyAction(s, first, {
+    type: "lay-down",
+    melds: [["6H1", "6S1", "6D1"]],
+    discard: "KC1",
+  });
+  assert.equal(s.remainingFinalTurns, 1);
+  s.hands[second] = ["9H1", "9S1", "9D1"];
+  s.stock = ["2C1"];
+  applyAction(s, second, { type: "draw-stock" });
+  applyAction(s, second, {
+    type: "lay-down",
+    melds: [["9H1", "9S1", "9D1"]],
+    discard: "2C1",
+  });
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[first], 0);
+  assert.equal(s.lastRoundScores[second], 0);
+});
+
+test("last-turn dump of extra card scores leftover melds as 0, not the discarded card", () => {
+  const m = startMatch({ matchId: "m-discard-meld", players: ["a", "b"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [first, second] = s._order;
+  s.hands[first] = ["5H1", "5S1", "5D1", "KC1"];
+  s.hasDrawn = true;
+  s.turn = 0;
+  applyAction(s, first, {
+    type: "lay-down",
+    melds: [["5H1", "5S1", "5D1"]],
+    discard: "KC1",
+  });
+  s.hands[second] = ["7H1", "7S1", "7D1"];
+  s.stock = ["KC2"];
+  applyAction(s, second, { type: "draw-stock" });
+  applyAction(s, second, { type: "discard", card: "KC2" });
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[second], 0);
+  assert.ok(!s.hands[second].includes("KC2"));
+  assert.deepEqual(s.lastRoundUnmelded[second], []);
+});
+
+test("round score is frozen at last discard even if the hand changes later", () => {
+  const m = startMatch({ matchId: "m-freeze", players: ["a", "b", "c"], dealSeed: "seed" });
+  const s = startRound(m, 1);
+  const [first, second, third] = s._order;
+  s.hands[first] = ["4H1", "4S1", "4D1", "KC1"];
+  s.hasDrawn = true;
+  s.turn = 0;
+  applyAction(s, first, {
+    type: "lay-down",
+    melds: [["4H1", "4S1", "4D1"]],
+    discard: "KC1",
+  });
+  s.hands[second] = ["AH1", "5C1", "9D1"];
+  s.stock = ["2C1", "3C1"];
+  applyAction(s, second, { type: "draw-stock" });
+  applyAction(s, second, { type: "discard", card: "AH1" });
+  assert.equal(s.lastTurnScores[second], 5 + 9 + 2);
+  s.hands[second].push("JK1");
+  s.hands[third] = ["3H1", "6C1", "8D1"];
+  applyAction(s, third, { type: "draw-stock" });
+  applyAction(s, third, { type: "discard", card: "3H1" });
+  assert.equal(s.status, "round-complete");
+  assert.equal(s.lastRoundScores[second], 5 + 9 + 2);
+});
+
 test("go-out flow: opponents get one more turn then round finalizes", () => {
   const m = startMatch({ matchId: "m5", players: ["a", "b", "c"] });
   const s = startRound(m, 1);
