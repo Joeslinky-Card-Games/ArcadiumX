@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useUser } from "@clerk/tanstack-react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApi, type MatchView } from "@/lib/api";
+import { MATCH_LIVE_QUERY, useTurnAlerts } from "@/lib/use-turn-alerts";
 import { useClerkIdentity } from "@/lib/identity";
 import { StackCard, StackCardBack, EmptyStackSlot, isWildCard, rankOfCard } from "./StackCard";
 
@@ -30,6 +31,7 @@ export function StackAttackMatch({ matchId }: { matchId: string }) {
     queryKey: ["match", matchId],
     queryFn: () => api<MatchView>(`/matches/${matchId}`),
     refetchInterval: 1500,
+    refetchIntervalInBackground: MATCH_LIVE_QUERY.refetchIntervalInBackground,
     enabled: Boolean(matchId),
   });
   const match = query.data;
@@ -74,6 +76,14 @@ export function StackAttackMatch({ matchId }: { matchId: string }) {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldStepAI, currentTurn, matchId]);
+
+  useTurnAlerts({
+    isMyTurn: Boolean(currentTurn && currentTurn === userId),
+    active: match?.status === "in-progress",
+    title: "Your turn",
+    body: "It's your move in Stack Attack.",
+    tag: `turn:${matchId}`,
+  });
 
   if (!match) {
     return <div className="p-8 text-white/70">Loading match…</div>;

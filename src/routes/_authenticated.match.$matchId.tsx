@@ -11,12 +11,8 @@ import { PlayingCard, CardBack, EmptyCardSlot } from "@/components/game/PlayingC
 import { sortHand, cardPoints } from "@/lib/game/cards";
 import { autoArrange, orderMeldForDisplay } from "@/lib/game/melds";
 import { RulesDialog } from "@/components/game/RulesDialog";
-import {
-  ensureNotificationPermission,
-  showNotification,
-  playChatSound,
-  playTurnSound,
-} from "@/lib/notify";
+import { playChatSound, showNotification } from "@/lib/notify";
+import { MATCH_LIVE_QUERY, useTurnAlerts } from "@/lib/use-turn-alerts";
 import {
   DndContext,
   PointerSensor,
@@ -89,6 +85,7 @@ function MatchPage() {
     queryKey: ["match", matchId],
     queryFn: () => api<MatchView>(`/matches/${matchId}`),
     refetchInterval: 2000,
+    refetchIntervalInBackground: MATCH_LIVE_QUERY.refetchIntervalInBackground,
     enabled: Boolean(matchId),
   });
   const gameId = peek.data?.gameId;
@@ -114,6 +111,7 @@ function CharlottesWebMatchInner({ matchId }: { matchId: string }) {
     queryKey: ["match", matchId],
     queryFn: () => api<MatchView>(`/matches/${matchId}`),
     refetchInterval: 2000,
+    refetchIntervalInBackground: MATCH_LIVE_QUERY.refetchIntervalInBackground,
     enabled: Boolean(matchId),
   });
 
@@ -436,32 +434,13 @@ function GameView({
     if (!dismissed) setRulesOpen(true);
   }, []);
 
-  // Ask for browser notification permission once, and prime audio on first
-  // user interaction so autoplay policies don't block the sounds.
-  useEffect(() => {
-    ensureNotificationPermission();
-    const prime = () => {
-      // Touching the AudioContext during a user gesture unlocks playback.
-      playTurnSound.length; // no-op reference to keep import
-    };
-    window.addEventListener("pointerdown", prime, { once: true });
-    window.addEventListener("keydown", prime, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", prime);
-      window.removeEventListener("keydown", prime);
-    };
-  }, []);
-
-  // Notify + play sound when it becomes the viewer's turn.
-  const wasMyTurn = useRef(false);
-  useEffect(() => {
-    const active = match.status === "in-progress";
-    if (isMyTurn && active && !wasMyTurn.current) {
-      playTurnSound();
-      showNotification("Your turn", "It's your move in Charlotte's Web.", `turn:${match.matchId}`);
-    }
-    wasMyTurn.current = isMyTurn && active;
-  }, [isMyTurn, match.status, match.turn, match.matchId]);
+  useTurnAlerts({
+    isMyTurn,
+    active: match.status === "in-progress",
+    title: "Your turn",
+    body: "It's your move in Charlotte's Web.",
+    tag: `turn:${match.matchId}`,
+  });
 
   // Notify + play sound on new chat messages from other players.
   const lastChatAtRef = useRef<number | null>(null);
