@@ -138,6 +138,8 @@ test("AI finishes a solo game without throwing", () => {
   }
   assert.equal(s.status, "complete");
   assert.equal(s.winner, "bot");
+  assert.equal(s.goneOutBy, "bot");
+  assert.equal(s.lastRoundScores.bot, s.scores.bot);
   assert.ok(s.scores.bot >= 0);
   assert.ok(Object.values(s.scorecards.bot).every((v) => v != null || v === 0));
   const filled = Object.keys(s.scorecards.bot).filter((k) => k !== "yahtzeeBonus");

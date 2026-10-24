@@ -4,7 +4,7 @@ const { ok, badRequest, notFound, forbidden, serverError } = require("../../lib/
 const { withAuth } = require("../../lib/auth");
 const engines = require("../../lib/engines");
 const { withRefreshedTtl } = require("../../lib/matches");
-const { recordMatchCompletion, recordRoundCompletion } = require("../../lib/stats");
+const { flushMatchStats } = require("../../lib/stats");
 const { recordCompletedMatch } = require("../../lib/runtime-stats");
 
 exports.handler = withAuth(async (event, { userId }) => {
@@ -58,8 +58,7 @@ exports.handler = withAuth(async (event, { userId }) => {
       }
       throw err;
     }
-    if (roundJustFinalized) await recordRoundCompletion(nextWithTtl);
-    if (shouldRecordStats) await recordMatchCompletion(nextWithTtl);
+    await flushMatchStats(match, nextWithTtl);
     if (shouldRecordRuntime) await recordCompletedMatch(nextWithTtl);
     return ok(engines.redactForUser(nextWithTtl, userId));
   } catch (err) {

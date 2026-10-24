@@ -20,6 +20,7 @@ function beginTurn(state) {
   state.held = [false, false, false, false, false];
   state.rollsUsed = 1;
   state.rollSeq = (state.rollSeq ?? 0) + 1;
+  state.lastAction = "open";
 }
 
 function startMatch({ matchId, players, dealSeed }) {
@@ -90,6 +91,7 @@ function applyAction(match, userId, action) {
       throw new Error("Invalid die");
     }
     state.held[action.dieIndex] = !state.held[action.dieIndex];
+    state.lastAction = "hold";
     state.version++;
     return state;
   }
@@ -98,6 +100,7 @@ function applyAction(match, userId, action) {
     if (state.rollsUsed < 1) throw new Error("Roll before holding dice");
     if (state.rollsUsed >= 3) throw new Error("No rerolls left");
     state.held = parseHeld(action, state.held);
+    state.lastAction = "hold";
     state.version++;
     return state;
   }
@@ -116,6 +119,7 @@ function applyAction(match, userId, action) {
     }
     state.rollsUsed += 1;
     state.rollSeq = (state.rollSeq ?? 0) + 1;
+    state.lastAction = "roll";
     state.version++;
     return state;
   }
@@ -128,19 +132,26 @@ function applyAction(match, userId, action) {
     state.scorecards[userId] = card;
     state.scores[userId] = totalScore(card);
 
+    state.lastAction = "score";
     const allDone = state.players.every((p) => isComplete(state.scorecards[p]));
     if (allDone) {
       state.status = "complete";
       let best = -1;
-      let winner = state.players[0];
+      const winners = [];
       for (const p of state._order) {
         const sc = state.scores[p] ?? 0;
         if (sc > best) {
           best = sc;
-          winner = p;
+          winners.length = 0;
+          winners.push(p);
+        } else if (sc === best) {
+          winners.push(p);
         }
       }
-      state.winner = winner;
+      state.winner = winners[0];
+      state.winners = winners;
+      state.goneOutBy = winners.length === 1 ? winners[0] : null;
+      state.lastRoundScores = { ...state.scores };
       state.version++;
       return state;
     }

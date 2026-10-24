@@ -59,6 +59,9 @@ function Row({
         const canScore =
           myTurn && isMe && filled == null && pot?.legal && match.status === "in-progress" && !disabled;
         const showPotential = canScore && pot?.potential != null;
+        const joker =
+          Boolean(match.dice?.length === 5 && match.dice.every((d) => d === match.dice![0])) &&
+          (match.scorecards?.[userId]?.yahtzee != null);
         return (
           <td key={p} className="px-1 py-1 text-center">
             {canScore ? (
@@ -66,6 +69,7 @@ function Row({
                 type="button"
                 onClick={() => onScore(cat)}
                 className={`w-full rounded-md px-1 py-0.5 text-sm font-semibold tabular-nums
+                  ${joker ? "ring-2 ring-amber-300 ring-offset-1 ring-offset-transparent" : ""}
                   ${pot?.potential ? "bg-amber-400/20 text-amber-200 hover:bg-amber-400/35" : "bg-white/5 text-white/40 hover:bg-rose-400/20 hover:text-rose-200"}
                 `}
               >
