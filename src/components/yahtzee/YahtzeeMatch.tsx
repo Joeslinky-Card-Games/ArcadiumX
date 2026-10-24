@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useUser } from "@clerk/tanstack-react-start";
 import { motion, LayoutGroup } from "framer-motion";
 import { useApi, type MatchView, type YahtzeeCategory } from "@/lib/api";
+import { MATCH_LIVE_QUERY, useTurnAlerts } from "@/lib/use-turn-alerts";
 import { useClerkIdentity } from "@/lib/identity";
 import { RulesDialog } from "@/components/game/RulesDialog";
 import { YahtzeeDie } from "./YahtzeeDie";
@@ -51,6 +52,7 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
     queryKey: ["match", matchId],
     queryFn: () => api<MatchView>(`/matches/${matchId}`),
     refetchInterval: 1500,
+    refetchIntervalInBackground: MATCH_LIVE_QUERY.refetchIntervalInBackground,
     enabled: Boolean(matchId),
   });
   const match = query.data;
@@ -165,6 +167,14 @@ export function YahtzeeMatch({ matchId }: { matchId: string }) {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldStepAI, currentTurn, match?.rollsUsed, match?.dice?.join(","), match?.lastAction, matchId]);
+
+  useTurnAlerts({
+    isMyTurn: Boolean(currentTurn && currentTurn === userId),
+    active: match?.status === "in-progress",
+    title: "Your turn",
+    body: "It's your move in Yahtzee.",
+    tag: `turn:${matchId}`,
+  });
 
   if (!match) {
     return <div className="p-8 text-white/70">Loading match…</div>;

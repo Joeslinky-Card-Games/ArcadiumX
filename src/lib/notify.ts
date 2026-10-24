@@ -1,7 +1,10 @@
-// Lightweight browser notification + sound helpers for match events.
-// Sounds are synthesized with the Web Audio API so no audio assets are needed.
+// Browser alerts for match events. Sounds use Web Audio (no asset files).
+// System notifications + tab title are the reliable path when the tab is hidden:
+// browsers pause polling by default and often block starting audio in the background.
 
 let audioCtx: AudioContext | null = null;
+let titleRestore: string | null = null;
+
 function ctx(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (audioCtx) return audioCtx;
@@ -17,10 +20,28 @@ function ctx(): AudioContext | null {
   return audioCtx;
 }
 
-function tone(frequency: number, duration: number, when = 0, type: OscillatorType = "sine", gain = 0.15) {
+export function tabIsForeground(): boolean {
+  if (typeof document === "undefined") return true;
+  return document.visibilityState === "visible" && document.hasFocus();
+}
+
+/** Create/resume AudioContext during a user gesture so later turns can beep. */
+export function unlockAudio() {
   const ac = ctx();
   if (!ac) return;
-  if (ac.state === "suspended") ac.resume().catch(() => {});
+  if (ac.state === "suspended") void ac.resume();
+}
+
+export function armAlerts() {
+  if (typeof window === "undefined") return;
+  unlockAudio();
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    void Notification.requestPermission();
+  }
+}
+
+function tone(ac: AudioContext, frequency: number, duration: number, when = 0, type: OscillatorType = "sine", gain = 0.15) {
   const t0 = ac.currentTime + when;
   const osc = ac.createOscillator();
   const g = ac.createGain();
@@ -34,42 +55,76 @@ function tone(frequency: number, duration: number, when = 0, type: OscillatorTyp
   osc.stop(t0 + duration + 0.02);
 }
 
+async function withRunningAudio(play: (ac: AudioContext) => void) {
+  const ac = ctx();
+  if (!ac) return;
+  if (ac.state === "suspended") {
+    try {
+      await ac.resume();
+    } catch {
+      return;
+    }
+  }
+  if (ac.state !== "running") return;
+  play(ac);
+}
+
 export function playChatSound() {
-  tone(880, 0.12, 0, "triangle", 0.12);
-  tone(1320, 0.14, 0.08, "triangle", 0.1);
+  void withRunningAudio((ac) => {
+    tone(ac, 880, 0.12, 0, "triangle", 0.12);
+    tone(ac, 1320, 0.14, 0.08, "triangle", 0.1);
+  });
 }
 
 export function playTurnSound() {
-  tone(660, 0.18, 0, "sine", 0.18);
-  tone(990, 0.22, 0.12, "sine", 0.16);
-  tone(1320, 0.26, 0.24, "sine", 0.14);
+  void withRunningAudio((ac) => {
+    tone(ac, 660, 0.18, 0, "sine", 0.18);
+    tone(ac, 990, 0.22, 0.12, "sine", 0.16);
+    tone(ac, 1320, 0.26, 0.24, "sine", 0.14);
+  });
 }
 
-let permissionAsked = false;
-export function ensureNotificationPermission() {
-  if (typeof window === "undefined") return;
-  if (!("Notification" in window)) return;
-  if (permissionAsked) return;
-  permissionAsked = true;
-  if (Notification.permission === "default") {
-    Notification.requestPermission().catch(() => {});
-  }
+export function flashTabTitle(message: string) {
+  if (typeof document === "undefined") return;
+  if (tabIsForeground()) return;
+  if (titleRestore == null) titleRestore = document.title;
+  document.title = message;
+}
+
+export function restoreTabTitle() {
+  if (typeof document === "undefined") return;
+  if (titleRestore == null) return;
+  document.title = titleRestore;
+  titleRestore = null;
 }
 
 export function showNotification(title: string, body: string, tag?: string) {
   if (typeof window === "undefined") return;
+  if (tabIsForeground()) return;
+  flashTabTitle(title);
   if (!("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
-  // Only surface a system notification when the tab isn't focused; otherwise
-  // the sound + in-app UI are enough.
-  if (typeof document !== "undefined" && document.visibilityState === "visible" && document.hasFocus()) return;
-  try {
-    const n = new Notification(title, { body, tag, silent: false });
-    n.onclick = () => {
-      window.focus();
-      n.close();
-    };
-  } catch {
-    /* ignore */
+  const opts: NotificationOptions = { body, tag, silent: false };
+  const native = () => {
+    try {
+      const n = new Notification(title, opts);
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    } catch {
+      /* ignore */
+    }
+  };
+  const sw = navigator.serviceWorker;
+  if (sw?.getRegistration) {
+    sw.getRegistration()
+      .then((reg) => {
+        if (reg?.showNotification) return reg.showNotification(title, opts);
+        native();
+      })
+      .catch(native);
+    return;
   }
+  native();
 }
